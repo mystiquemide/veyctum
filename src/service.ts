@@ -2,6 +2,7 @@ import { type Address } from 'viem';
 import type { AppConfig } from './config.js';
 import { BASE_CHAIN_ID, normalizeAddr, type LookupResult } from './domain.js';
 import { LookupError, stateToStatus, toLookupError } from './errors.js';
+import type { ReadinessProbe } from './rpc.js';
 import { aggregateEffects, normalizeEffects } from './normalize.js';
 import { RpcGateway } from './rpc.js';
 import type { LookupQuery } from './schemas.js';
@@ -19,6 +20,11 @@ export class LookupService {
   constructor(config: AppConfig) {
     this.config = config;
     this.rpc = new RpcGateway(config);
+  }
+
+  /** FR-025 / REV-003: live dependency readiness probe (chain id + head). */
+  async readiness(): Promise<ReadinessProbe> {
+    return this.rpc.check();
   }
 
   async lookup(query: LookupQuery): Promise<LookupResult> {
@@ -55,6 +61,13 @@ export class LookupService {
 
       if (!finality.reached) {
         // FR-006: definitely final facts only.
+        return { ...base, state: 'PENDING', status: 'pending', effects: [] };
+      }
+
+      if (facts.status === null) {
+        // REV-004: the block is deep enough to be final but the receipt is still
+        // unavailable on the agreed provider view (indexing lag). This is not
+        // evidence of "no transfer" - keep it PENDING rather than abstaining.
         return { ...base, state: 'PENDING', status: 'pending', effects: [] };
       }
 

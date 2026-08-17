@@ -32,7 +32,7 @@ limitations:
 auth:
   type: none          # public miner endpoint; a bearer header can be added on registration
 
-rate_limit_per_sec: 4 # conservative for public RPC quotas; enforce in code before registration
+rate_limit_per_sec: 4 # enforced in code (NFR-005; fixed-window per IP, 429 + Retry-After)
 cache_ttl_sec: 0
 circuit_threshold: 3
 circuit_cooldown_seconds: 20

@@ -3,15 +3,25 @@ import type { AppConfig } from './config.js';
 import { LookupService } from './service.js';
 import { lookupQuerySchema } from './schemas.js';
 import { LookupError } from './errors.js';
+import { FixedWindowLimiter } from './rateLimit.js';
+import { ConsumerStore } from './consumerStore.js';
+import { registerConsumerRoutes } from './consumer.js';
 
 /**
  * Miner API surface (FR-025, FR-002):
  * - GET /health          process liveness
- * - GET /ready           load-bearing config/RPC readiness
+ * - GET /ready           live RPC chain-id/head probe (FR-025, REV-003)
  * - GET /lookup          transaction effect lookup (declared in public YAML)
+ * - /consumer/*          thin protected-action proof gate (FR-015..FR-020)
  * Logs are structured and redacted (NFR-006).
+ * Rate limiting enforced for every route except /health and /ready (NFR-005, REV-002).
  */
-export async function buildApp(config: AppConfig, service: LookupService): Promise<FastifyInstance> {
+export async function buildApp(
+  config: AppConfig,
+  service: LookupService,
+  consumerStore?: ConsumerStore,
+): Promise<FastifyInstance> {
+  const limiter = new FixedWindowLimiter(config.RATE_LIMIT_PER_SEC, config.RATE_LIMIT_WINDOW_MS);
   const app = Fastify({
     logger: {
       level: 'info',
@@ -31,14 +41,51 @@ export async function buildApp(config: AppConfig, service: LookupService): Promi
     // Reject unknown query fields at the boundary (FR-002) instead of
     // silently stripping them (Fastify's default Ajv behavior).
     ajv: { customOptions: { removeAdditional: false } },
+    // NFR-005 hardening: GET-only API but bound the body and request lifetime.
+    bodyLimit: 1024,
+    connectionTimeout: 10_000,
+    requestTimeout: 15_000,
+  });
+
+  // NFR-005 / REV-002: fixed-window rate limit keyed by req.ip (trustProxy-aware).
+  app.addHook('onRequest', async (req, reply) => {
+    if (req.url.startsWith('/health') || req.url.startsWith('/ready')) return;
+    limiter.prune();
+    const verdict = limiter.check(req.ip);
+    if (!verdict.allowed) {
+      const retryAfter = Math.max(1, Math.ceil((verdict.resetMs - Date.now()) / 1000));
+      reply.header('Retry-After', String(retryAfter));
+      return reply
+        .code(429)
+        .header('X-RateLimit-Limit', String(config.RATE_LIMIT_PER_SEC))
+        .header('X-RateLimit-Remaining', '0')
+        .send({ error: 'RATE_LIMITED', detail: `rate limit exceeded (${config.RATE_LIMIT_PER_SEC}/s)`, retry_after: retryAfter });
+    }
+    reply.header('X-RateLimit-Limit', String(config.RATE_LIMIT_PER_SEC));
+    reply.header('X-RateLimit-Remaining', String(verdict.remaining));
   });
 
   app.get('/health', async () => ({ status: 'ok', service: config.MINER_NAME, time: new Date().toISOString() }));
 
-  app.get('/ready', async () => {
-    // Conservative readiness: configuration is validated at boot; RPC reachability
-    // is probed without making a lookup (FR-025 separates process vs dependency health).
-    return { status: 'ready', rpc: 'configured', intents: ['ONCHAIN_TX_LOOKUP'] };
+  app.get('/ready', async (req, reply) => {
+    // FR-025 / REV-003: readiness is a live dependency probe, not a static string.
+    const probe = await service.readiness();
+    if (!probe.ok || probe.chain_id !== config.BASE_CHAIN_ID) {
+      return reply.code(503).send({
+        status: 'unready',
+        rpc: probe.detail ?? 'unreachable',
+        chain_id_expected: config.BASE_CHAIN_ID,
+        chain_id_observed: probe.chain_id,
+        intents: ['ONCHAIN_TX_LOOKUP'],
+      });
+    }
+    return {
+      status: 'ready',
+      rpc: 'reachable',
+      chain_id: probe.chain_id,
+      head: probe.head?.toString() ?? null,
+      intents: ['ONCHAIN_TX_LOOKUP'],
+    };
   });
 
   app.get('/lookup', {
@@ -56,10 +103,16 @@ export async function buildApp(config: AppConfig, service: LookupService): Promi
   }, async (req, reply) => {
     const parsed = lookupQuerySchema.safeParse(req.query);
     if (!parsed.success) {
+      // REV-007: echo the tx_hash only when it is actually a string; never
+      // coerce objects/arrays into echo text.
+      const rawHash =
+        typeof req.query === 'object' && req.query !== null && 'tx_hash' in req.query
+          ? (req.query as Record<string, unknown>).tx_hash
+          : '';
       return reply.code(400).send({
         schema_version: config.SCHEMA_VERSION,
         chain_id: -1,
-        tx_hash: typeof req.query === 'object' && req.query && 'tx_hash' in req.query ? String((req.query as { tx_hash: string }).tx_hash) : '',
+        tx_hash: typeof rawHash === 'string' ? rawHash : '',
         state: 'INVALID_INPUT',
         status: 'error',
         finality: { required_confirmations: config.REQUIRED_CONFIRMATIONS, confirmations: null, reached: false },
@@ -72,6 +125,10 @@ export async function buildApp(config: AppConfig, service: LookupService): Promi
     const result = await service.lookup(parsed.data);
     return reply.code(200).send(result);
   });
+
+  if (consumerStore) {
+    registerConsumerRoutes(app, config, consumerStore);
+  }
 
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof LookupError) {

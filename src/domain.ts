@@ -17,9 +17,6 @@ export const USDC_CONTRACT = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as con
 export const TRANSFER_TOPIC0 =
   '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 
-/** RPC providers return lowercase addresses; viem getAddress would throw on
- * them. Internal normalization is lowercase; display checksums are applied at
- * the boundary only. */
 /** RPC providers return lowercase addresses; viem's getAddress would throw on
  * them. Internal normalization is lowercase; display checksums are applied at
  * the boundary only. */
@@ -49,9 +46,9 @@ export interface TransferEffect {
   recipient: string;
   /** Raw integer amount in token base units (BR-002 exact equality). */
   raw_amount: string;
-  /** Evidence references (FR-008). */
+  /** Evidence references (FR-008). Log block hash may be absent (REV-005). */
   log_index: number;
-  block_hash: string;
+  block_hash: string | null;
   tx_hash: string;
 }
 

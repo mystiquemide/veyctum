@@ -3,9 +3,9 @@
 ## Project
 
 - Plan file: `PROJECT_PLAN.md`
-- Status: Phase 1 COMPLETE; Phase 2 in progress - CP-002A (core API) and CP-002B (deploy + p95) complete; registration checkpoint next
+- Status: Phase 1 COMPLETE; Phase 2 in progress - CP-002A, CP-002B, and CP-002C (hardening + consumer gate) complete; registration checkpoint next
 - Current phase: Phase 2 - Complete a thin real routed lookup with inspectable proof
-- Current checkpoint: CP-002B (Complete); registration checkpoint (not started)
+- Current checkpoint: CP-002C (Complete); registration checkpoint (not started)
 - Last updated: 2026-08-17
 - Last agent: Executor
 - Planning confidence: 82/100 (Medium)
@@ -310,6 +310,35 @@ This state file records execution history, current status, decisions, deviations
 - Blockers:
   - None.
 - Next exact action: Registration checkpoint - pick a stable public URL (recommend named tunnel on breachresponse.xyz or Railway), host the Miner YAML with the live base_url (IPFS or stable host), compute and preserve the YAML hash, then perform the on-chain `registerMiner()` on Base Sepolia from the throwaway wallet (has ETH), and verify the live discovery entry. Then re-run the paid auto-routed Engine ask to include Veyctum and measure routed p95 (NFR-003 target <= 15s).
+
+### CP-002C: Review-driven hardening + consumer proof gate (Phase 2)
+
+- Status: Complete
+- Date: 2026-08-17
+- Agent: Executor
+- Phase: Phase 2 - Complete a thin real routed lookup with inspectable proof
+- Objective: Close every code-review finding (REV-001..REV-008) and build the consumer proof gate (FR-011..FR-020) so the winning invariant is operational and demonstrable before registration.
+- Work completed:
+  - REV-001: `RpcGateway.lookup` now fetches `eth_chainId` per provider; providers must agree AND report 8453 or the result is `RPC_DISAGREEMENT`/`UNSUPPORTED` (FR-005, FR-004, REV-006 producer wired).
+  - REV-002: enforced the YAML-declared rate limit in code - fixed-window limiter per IP (`src/rateLimit.ts`), 4 rps default, 429 + Retry-After + X-RateLimit-* headers; `/health` and `/ready` exempt; Fastify `bodyLimit`/connection/request timeouts added (NFR-005).
+  - REV-003: `GET /ready` is now a live dependency probe (chain id + head) via `RpcGateway.check()`; 503 + observed chain id when unreachable/mis-chained (FR-025, plan line 630).
+  - REV-004: agreed-but-null receipt after finality now returns `PENDING` instead of `NO_SUPPORTED_TRANSFER` (indexing-lag window).
+  - REV-005: absent log blockHash stays `null` in evidence instead of a fake `'0x'` sentinel (normalize.ts).
+  - REV-006: `UNSUPPORTED` state now has a real producer (wrong-chain provider pair).
+  - REV-007: error path never coerces non-string `tx_hash` into the echo.
+  - REV-008: CI pins Node 24.19.0 and runs live integration tests in a separate job; unit run is hermetic (`vitest.integration.config.ts`, `test/live.integration.test.ts`).
+  - Consumer proof gate (FR-011..FR-020, DEC-002 branch 2): pure comparator (`src/comparator.ts`: exact token/sender/recipient/raw-integer equality, sender from log, zero/self/mint/burn/token/sender/recipient/amount/ambiguous rejection), SQLite action store (`src/consumerStore.ts`, node:sqlite, atomic at-most-once transitions, append-only audit), HTTP surface (`src/consumer.ts`: create/list/get/verify; release requires a `signal_hash` - BR-007; retryable states keep `LOCKED` - FR-018; duplicates refused - FR-019/BR-008).
+  - README, `.env.example`, `veyctum.yaml` (rate-limit comment now truthful), `.gitignore` (`data/`) updated.
+- Files or assets changed: `src/{rpc,service,server,schemas,normalize,domain,config,app}.ts`, new `src/{rateLimit,comparator,consumerStore,consumer}.ts`, `test/{server,normalize,comparator,consumerStore,consumer,live.integration}.test.ts`, `vitest{,.integration}.config.ts`, `package.json`, `.github/workflows/ci.yml`, `.env.example`, `veyctum.yaml`, `.gitignore`, `README.md`, `PROJECT_STATE.md`. Review artifacts (`CODE_REVIEW.md`, `REVIEW_CONSOLIDATED.md`) are excluded from git via `.git/info/exclude`.
+- Commands or checks run: `tsc --noEmit` (0 errors), `vitest run` (53/53 hermetic), `vitest run -c vitest.integration.config.ts` (3/3 live Base RPC incl. new readiness probe), `npm run build` (dist emitted), live smoke on :8190 with fresh SQLite DB: `/health` 200, `/ready` 200 with live chain_id 8453 + head, `/lookup` on the CP-001 fixture returns OK + normalized effect, `POST /consumer/actions` 201 LOCKED.
+- Test results: 56/56 tests pass across both suites. Rate limit 429 verified in tests; positive release / negative rejection / NO_EFFECT / BR-007 / duplicate refusal / retryable-LOCKED all covered in `test/consumer.test.ts` + `test/consumerStore.test.ts`.
+- Acceptance criteria verified: All 8 review findings closed; FR-011..FR-020 core implemented and tested; no secrets introduced; existing live behavior unchanged (fixture still OK with same normalized effect); state-file claims reproducible.
+- Decisions: Use node:sqlite (built into Node 24 LTS) for the consumer store - zero new dependencies. Consumer verify endpoint accepts a real Veyctum lookup result plus Telegraph signal metadata; the paid x402 routing step remains the demo's external action (per CP-001 evidence).
+- Deviations: None from plan. Test fixture arithmetic in the FR-014 split test was corrected during development (my initial split amounts did not sum to the expected total; aggregation logic itself validated correct).
+- Risks introduced: In-memory rate limiter is single-process only (documented); node:sqlite WAL DB is a new local state artifact (gitignored, `data/`).
+- Known issues: ISSUE-001 residual (canonical scorer activation) unchanged. Live deployment on :8090 still runs Node v22.23.0 (`/root/.hermes/node/bin/node`) - must be restarted on the pinned Node 24.19.0 before registration so `node:sqlite` and the new code paths run on the NFR-002 target.
+- Blockers: None for this checkpoint.
+- Next exact action: Restart the live miner on Node 24.19.0 with the rebuilt `dist/` (and fresh DB), then proceed to the registration checkpoint: stable URL (named tunnel veyctum.breachresponse.xyz on :8090 or Railway), finalize `veyctum.yaml` base_url, host YAML + preserve hash (FR-027), `registerMiner()` on Base Sepolia from the funded throwaway wallet, verify live discovery, then capture the registered routed Engine ask routed to Veyctum + routed p95 (NFR-003 <= 15s), and register the diagnostic scoring module at integrate.telegraphprotocol.com (ISSUE-001).
 
 ## Decisions Made During Execution
 

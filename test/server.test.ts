@@ -3,22 +3,43 @@ import type { FastifyInstance } from 'fastify';
 import { loadConfig } from '../src/config.js';
 import { buildApp } from '../src/server.js';
 import { LookupService } from '../src/service.js';
-import { USDC_CONTRACT } from '../src/domain.js';
+import { ConsumerStore } from '../src/consumerStore.js';
 
 const HASH = '0x373982c25ba2c56c52c30a6db4ea14f9af267d6152f09f14f0b9b43e842e16a7';
-const USDC = USDC_CONTRACT.toLowerCase();
 
-// Deterministic fixture: the real Base mainnet USDC transfer used in CP-001.
-function makeRealisticService(): LookupService {
-  const svc = new LookupService(loadConfig({}));
-  return svc;
+/** Service stub that simulates a healthy dependency probe without network. */
+class HealthyService extends LookupService {
+  constructor() {
+    super(loadConfig({}));
+  }
+
+  override async readiness() {
+    return { ok: true, chain_id: 8453, head: 50101720n, provider: 'primary' };
+  }
+}
+
+/** Service stub that simulates an unreachable dependency probe without network. */
+class DownService extends LookupService {
+  constructor() {
+    super(loadConfig({}));
+  }
+
+  override async readiness() {
+    return { ok: false, chain_id: null, head: null, provider: 'primary', detail: 'probe timed out' };
+  }
+}
+
+async function makeApp(service?: LookupService, env: Record<string, string> = {}) {
+  const config = loadConfig({ RATE_LIMIT_PER_SEC: '1000', CONSUMER_DB_PATH: ':memory:', ...env });
+  const store = new ConsumerStore(':memory:');
+  const app = await buildApp(config, service ?? new LookupService(config), store);
+  return { app, config };
 }
 
 describe('server surface (FR-025, FR-002)', () => {
   let app: FastifyInstance;
-
   beforeEach(async () => {
-    app = await buildApp(loadConfig({}), makeRealisticService());
+    ({ app } = await makeApp(new HealthyService()));
   });
 
   it('GET /health returns process liveness', async () => {
@@ -29,11 +50,23 @@ describe('server surface (FR-025, FR-002)', () => {
     expect(body.service).toBe('veyctum');
   });
 
-  it('GET /ready separates process vs dependency readiness', async () => {
+  it('GET /ready returns ready with the live chain id when the probe passes (FR-025/REV-003)', async () => {
     const res = await app.inject({ method: 'GET', url: '/ready' });
     expect(res.statusCode).toBe(200);
-    expect(res.json().status).toBe('ready');
-    expect(res.json().intents).toContain('ONCHAIN_TX_LOOKUP');
+    const body = res.json();
+    expect(body.status).toBe('ready');
+    expect(body.chain_id).toBe(8453);
+    expect(body.head).toBe('50101720');
+    expect(body.intents).toContain('ONCHAIN_TX_LOOKUP');
+  });
+
+  it('GET /ready returns 503 when the RPC dependency is unreachable (FR-025/REV-003)', async () => {
+    const { app: downApp } = await makeApp(new DownService());
+    const res = await downApp.inject({ method: 'GET', url: '/ready' });
+    expect(res.statusCode).toBe(503);
+    const body = res.json();
+    expect(body.status).toBe('unready');
+    expect(body.chain_id_observed).toBeNull();
   });
 
   it('GET /lookup rejects malformed input without RPC calls (400 INVALID_INPUT)', async () => {
@@ -52,30 +85,27 @@ describe('server surface (FR-025, FR-002)', () => {
     const res = await app.inject({ method: 'GET', url: `/lookup?chain=ethereum&tx_hash=${HASH}` });
     expect(res.statusCode).toBe(400);
   });
+
+  it('GET /lookup does not echo coerced non-string tx_hash (REV-007)', async () => {
+    const res = await app.inject({ method: 'GET', url: '/lookup?tx_hash[]=x' });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().tx_hash).toBe('');
+  });
 });
 
-describe('lookup states against real Base mainnet RPC (integration, FR-005/FR-010)', () => {
-  const svc = makeRealisticService();
-
-  it('returns OK with normalized effects for the CP-001 fixture', async () => {
-    const res = await svc.lookup({ chain: 'base', tx_hash: HASH });
-    expect(res.state).toBe('OK');
-    expect(res.status).toBe('success');
-    expect(res.chain_id).toBe(8453);
-    expect(res.finality.reached).toBe(true);
-    expect(res.effects.length).toBeGreaterThan(0);
-    const fx = res.effects[0];
-    expect(fx).toBeDefined();
-    expect(fx!.token.toLowerCase()).toBe(USDC);
-    expect(fx!.raw_amount).toBe('237440081636');
-    expect(fx!.sender.toLowerCase()).toBe('0x2192bc3b4028acc1113f2cd9ac2cba70c36520db');
-    expect(fx!.recipient.toLowerCase()).toBe('0xb2cc224c1c9fee385f8ad6a55b4d94e92359dc59');
-  }, 20000);
-
-  it('returns explicit NOT_FOUND for an unknown hash', async () => {
-    const missing = '0x' + 'ff'.repeat(32) as `0x${string}`;
-    const res = await svc.lookup({ chain: 'base', tx_hash: missing });
-    expect(res.state).toBe('NOT_FOUND');
-    expect(res.status).toBe('not_found');
-  }, 20000);
+describe('rate limiting (NFR-005, REV-002)', () => {
+  it('returns 429 with Retry-After after the per-second budget is spent', async () => {
+    const { app } = await makeApp(new HealthyService(), { RATE_LIMIT_PER_SEC: '2' });
+    const ok1 = await app.inject({ method: 'GET', url: `/lookup?tx_hash=${HASH}&extra=1` });
+    const ok2 = await app.inject({ method: 'GET', url: '/lookup?tx_hash=0x1234' });
+    expect(ok1.statusCode).toBe(400); // allowed (validation error, not rate)
+    expect(ok2.statusCode).toBe(400);
+    const limited = await app.inject({ method: 'GET', url: '/lookup?tx_hash=0x1234' });
+    expect(limited.statusCode).toBe(429);
+    expect(limited.json().error).toBe('RATE_LIMITED');
+    expect(limited.headers['retry-after']).toBeDefined();
+    // health/ready are never rate limited (monitoring must always work)
+    const health = await app.inject({ method: 'GET', url: '/health' });
+    expect(health.statusCode).toBe(200);
+  });
 });

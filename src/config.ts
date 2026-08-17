@@ -21,6 +21,11 @@ const envSchema = z.object({
   REQUIRED_CONFIRMATIONS: z.coerce.number().int().min(1).default(2),
   RPC_TIMEOUT_MS: z.coerce.number().int().min(100).default(4000),
   LOOKUP_BUDGET_MS: z.coerce.number().int().min(100).max(8000).default(8000),
+  // NFR-005 / REV-002: rate limit declared in veyctum.yaml and enforced here.
+  RATE_LIMIT_PER_SEC: z.coerce.number().int().min(1).max(1000).default(4),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(100).max(60000).default(1000),
+  // Consumer proof gate durable store (FR-015..FR-019); ':memory:' for tests.
+  CONSUMER_DB_PATH: z.string().default('./data/veyctum.db'),
   MINER_NAME: z.string().default('veyctum'),
   SCHEMA_VERSION: z.string().default(DEFAULT_SCHEMA_VERSION),
 });

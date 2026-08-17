@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BASE_CHAIN_ID, BASE_CHAIN_NAME } from './domain.js';
+import { BASE_CHAIN_NAME } from './domain.js';
 
 /**
  * Public request contract (FR-002, FR-003, FR-004).
@@ -20,8 +20,3 @@ export const lookupQuerySchema = z
   .strict();
 
 export type LookupQuery = z.infer<typeof lookupQuerySchema>;
-
-export const chainIdFor = (chain: string): number => {
-  if (chain !== BASE_CHAIN_NAME) throw new Error(`unsupported chain: ${chain}`);
-  return BASE_CHAIN_ID;
-};

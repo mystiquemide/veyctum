@@ -74,6 +74,13 @@ describe('normalizeEffects (FR-007, FR-008)', () => {
     expect(normalizeEffects(facts([log]), USDC)).toHaveLength(0);
   });
 
+  it('keeps block_hash null when the log has none (REV-005)', () => {
+    const log = { ...transferLog({ from: SENDER, to: RECIPIENT, value: 237440081636n, index: 3 }), blockHash: null };
+    const effects = normalizeEffects(facts([log]), USDC);
+    expect(effects).toHaveLength(1);
+    expect(effects[0]!.block_hash).toBeNull();
+  });
+
   it('aggregates identical triples with checked arithmetic and preserves log evidence', () => {
     const a = transferLog({ from: SENDER, to: RECIPIENT, value: 100n, index: 0 });
     const b = transferLog({ from: SENDER, to: RECIPIENT, value: 200n, index: 1 });

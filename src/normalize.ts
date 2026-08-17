@@ -47,7 +47,8 @@ export function normalizeEffects(
       recipient: normalizeAddr(decoded.to),
       raw_amount: decoded.value.toString(),
       log_index: log.logIndex,
-      block_hash: normalizeHash(log.blockHash ?? '0x'),
+      // REV-005: an absent log block hash stays null, never a fake '0x' sentinel.
+      block_hash: log.blockHash ? normalizeHash(log.blockHash) : null,
       tx_hash: normalizeHash(log.transactionHash),
     });
   }

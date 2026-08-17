@@ -1,5 +1,14 @@
-import { createPublicClient, http, TransactionNotFoundError, type Address, type Hex, type PublicClient, type Transport } from 'viem';
+import {
+  createPublicClient,
+  http,
+  TransactionNotFoundError,
+  type Address,
+  type Hex,
+  type PublicClient,
+  type Transport,
+} from 'viem';
 import { base } from 'viem/chains';
+import { BASE_CHAIN_ID } from './domain.js';
 import { LookupError } from './errors.js';
 import type { AppConfig } from './config.js';
 import { normalizeAddr } from './domain.js';
@@ -24,15 +33,25 @@ export interface TxFacts {
 
 export interface ProviderView {
   provider: string;
+  chainId: number;
   facts: TxFacts;
   head: bigint;
+}
+
+export interface ReadinessProbe {
+  ok: boolean;
+  chain_id: number | null;
+  head: bigint | null;
+  provider: string;
+  detail?: string;
 }
 
 type BaseClient = PublicClient<Transport, typeof base>;
 
 /**
- * RPC gateway (FR-005): queries primary and fallback independently and compares
- * critical facts. A single provider can never support the verification claim (ADR-005).
+ * RPC gateway (FR-005, ADR-005): queries primary and fallback independently and
+ * compares critical facts including the chain ID each provider actually serves.
+ * A single provider can never support the verification claim.
  */
 export class RpcGateway {
   private readonly primary: BaseClient;
@@ -53,14 +72,15 @@ export class RpcGateway {
     this.budgetMs = cfg.LOOKUP_BUDGET_MS;
   }
 
-  /** Fetch tx + receipt + head from one provider with a bounded timeout. */
+  /** Fetch tx + receipt + head + chain id from one provider with a bounded timeout. */
   private async fetchOne(client: BaseClient, provider: string, hash: Address): Promise<ProviderView> {
     const timeout = new Promise<never>((_, rej) =>
       setTimeout(() => rej(new Error(`provider ${provider} timed out`)), this.timeoutMs),
     );
     const work = (async () => {
-      const [head, tx, receipt] = await Promise.all([
+      const [head, chainId, tx, receipt] = await Promise.all([
         client.getBlockNumber(),
+        client.getChainId(),
         client.getTransaction({ hash }),
         client.getTransactionReceipt({ hash }).catch(() => null),
       ]);
@@ -77,6 +97,7 @@ export class RpcGateway {
       }));
       return {
         provider,
+        chainId,
         facts: {
           txHash: normalizeAddr(tx.hash),
           blockNumber: tx.blockNumber,
@@ -104,7 +125,32 @@ export class RpcGateway {
     }
   }
 
-  /** Fetch both providers in parallel and compare critical facts. */
+  /** Bounded readiness probe: chain id + head from the primary provider (FR-025). */
+  async check(): Promise<ReadinessProbe> {
+    const timeout = new Promise<never>((_, rej) =>
+      setTimeout(() => rej(new Error('readiness probe timed out')), this.timeoutMs),
+    );
+    const work = (async () => {
+      const [head, chainId] = await Promise.all([
+        this.primary.getBlockNumber(),
+        this.primary.getChainId(),
+      ]);
+      return { ok: true, chain_id: chainId, head, provider: 'primary' };
+    })();
+    try {
+      return await Promise.race([work, timeout]);
+    } catch (err) {
+      return {
+        ok: false,
+        chain_id: null,
+        head: null,
+        provider: 'primary',
+        detail: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  /** Fetch both providers in parallel and compare critical facts including chain id. */
   async lookup(hash: Address): Promise<{ primary: ProviderView; fallback: ProviderView }> {
     const start = Date.now();
     const settle = await Promise.allSettled([
@@ -131,6 +177,23 @@ export class RpcGateway {
     }
     const a = (primary as PromiseFulfilledResult<ProviderView>).value;
     const b = (fallback as PromiseFulfilledResult<ProviderView>).value;
+
+    // FR-005 / REV-001: compare the chain ID each provider actually serves.
+    if (a.chainId !== b.chainId) {
+      throw new LookupError(
+        'RPC_DISAGREEMENT',
+        `chain id disagreement: primary ${a.chainId}, fallback ${b.chainId}`,
+      );
+    }
+    if (a.chainId !== BASE_CHAIN_ID) {
+      // Both providers report the same wrong chain: unsupported environment, not a
+      // lookup result (FR-004/FR-010 UNSUPPORTED; REV-006 producer).
+      throw new LookupError(
+        'UNSUPPORTED',
+        `providers report chain id ${a.chainId}, expected ${BASE_CHAIN_ID} (Base mainnet)`,
+      );
+    }
+
     if (!factsAgree(a.facts, b.facts)) {
       throw new LookupError('RPC_DISAGREEMENT', 'critical facts conflict between providers');
     }
