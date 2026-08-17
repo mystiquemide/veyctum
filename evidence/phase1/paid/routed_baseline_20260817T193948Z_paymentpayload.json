@@ -1,0 +1,32 @@
+{
+  "x402Version": 2,
+  "resource": {
+    "url": "http://devnode.telegraphprotocol.com/v1/ask",
+    "description": "Payment required for LLM-routed inference.",
+    "mimeType": "application/json"
+  },
+  "accepted": {
+    "scheme": "exact",
+    "network": "eip155:84532",
+    "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "amount": "10000",
+    "payTo": "0x5a2324aA18613FAD4e44bDF0d6c73Ec1f6D87ff8",
+    "maxTimeoutSeconds": 60,
+    "extra": {
+      "name": "USDC",
+      "version": "2"
+    }
+  },
+  "payload": {
+    "signature": "0xd271de61ad0a68ecf63063f6f2cf84e2c31f5ef27f2f2a549088a358404a24ff1e75d3d4a6b74b56e0ed998f1347abe2ed5e3a18476d05b5594e89692da15e6b1b",
+    "authorization": {
+      "from": "0x65aE39Fd36f2a9Fa8d738A0FaC369c0CDc507a99",
+      "to": "0x5a2324aA18613FAD4e44bDF0d6c73Ec1f6D87ff8",
+      "value": "10000",
+      "validAfter": "1786995569",
+      "validBefore": "1786995634",
+      "nonce": "0x640c20fec1047e884e88daa687dd5f44a27114a8966d4fe90c684984d36a02bd"
+    }
+  },
+  "extensions": {}
+}
