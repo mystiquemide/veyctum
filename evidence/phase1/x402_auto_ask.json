@@ -1,0 +1,17 @@
+{
+  "error": "payment required",
+  "accepts": [
+    {
+      "scheme": "exact",
+      "price": "$0.01",
+      "network": "eip155:84532",
+      "payTo": "0x5a2324aA18613FAD4e44bDF0d6c73Ec1f6D87ff8"
+    },
+    {
+      "scheme": "exact",
+      "price": "$0.01",
+      "network": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+      "payTo": "G53EbeTZSNsAn7bj6iMFUQnq3zpDdEbHhKkPRywo8bix"
+    }
+  ]
+}

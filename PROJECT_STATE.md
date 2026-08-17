@@ -3,11 +3,11 @@
 ## Project
 
 - Plan file: `PROJECT_PLAN.md`
-- Status: Planned
-- Current phase: Not started
-- Current checkpoint: CP-000
-- Last updated: 2026-08-14
-- Last agent: Planner
+- Status: Phase 1 in progress - CP-001 read-only evidence complete; paid step awaiting wallet + approval
+- Current phase: Phase 1 - Prove Veyctum's semantic effects are a scoreable Telegraph capability
+- Current checkpoint: CP-001 (Partial)
+- Last updated: 2026-08-17
+- Last agent: Executor
 - Planning confidence: 82/100 (Medium)
 
 ## Source of Truth Order
@@ -42,14 +42,14 @@ This state file records execution history, current status, decisions, deviations
 ## Current Objective
 
 - Phase: Phase 1 - Prove Veyctum's semantic effects are a scoreable Telegraph capability
-- Checkpoint: CP-001 (not started)
+- Checkpoint: CP-001 (in progress; read-only evidence complete, paid step awaiting wallet + spend approval)
 - Goal: Determine with authoritative evidence whether the live canonical `ONCHAIN_TX_LOOKUP` request, answer, ground truth, and scorer reward normalized ERC-20 effects, and freeze the truthful Miner/consumer boundary.
-- Expected files or assets: Future Phase 1 evidence may include source code, diagnostic schema, captured request/response artifacts, and checkpoint updates; none exists yet.
+- Expected files or assets: Future Phase 1 evidence may include source code, diagnostic schema, captured request/response artifacts, and checkpoint updates; `evidence/phase1/` now contains the read-only snapshots.
 - Acceptance criteria:
-  - At least one paid Telegraph response and signal hash are captured.
-  - The accepted request and response schema are recorded exactly.
-  - Effect scoreability is proven or disproven rather than assumed.
-  - `DEC-001` and `DEC-002` are resolved.
+  - At least one paid Telegraph response and signal hash are captured. (PENDING - x402 wallet step)
+  - The accepted request and response schema are recorded exactly. (PARTIAL - 402 challenge/terms recorded; paid response pending)
+  - Effect scoreability is proven or disproven rather than assumed. (IN PROGRESS - see findings)
+  - `DEC-001` and `DEC-002` are resolved. (PENDING - decision draft below)
   - A no-go result stops implementation pending an amendment.
 - Required verification: Live Telegraph discovery, paid request, signal lookup, released H1 specification/canonical examples, official score behavior, and documented timestamps/outputs.
 
@@ -63,14 +63,16 @@ This state file records execution history, current status, decisions, deviations
 - Live `ONCHAIN_TX_LOOKUP` snapshot reviewed on 2026-08-14.
 - Official Circle Base and Base Sepolia USDC contract-address source reviewed.
 - `PROJECT_PLAN.md` and `PROJECT_STATE.md` created as planning-only artifacts.
+- CP-001 read-only evidence collected on 2026-08-17: live intent/miner snapshot, verifier schemas, x402 challenge terms, daemon question history, signal lookup shape, scoring-script registry. Evidence saved under `evidence/phase1/`.
 
 ### In Progress
 
-- None. Planning is complete; execution has not begun.
+- CP-001 paid request step: one direct ask to Verity (9001) and one auto-routed ask, then signal retrieval. Blocked on user-approved spend cap (DEC-008) and a funded Base Sepolia USDC wallet (BLOCK-003).
 
 ### Blocked
 
-- Production implementation is intentionally not started in planning mode.
+- CP-001 paid step is blocked at the x402 wallet boundary: needs user-approved spend cap and a funded Base Sepolia wallet (testnet USDC + gas via official faucets; browser session required).
+- Production implementation is intentionally not started until Phase 1 evidence resolves the scoreability question.
 - The current Miner thesis cannot proceed beyond Phase 1 until canonical ERC-20 effect scoreability is proven.
 
 ### Not Started
@@ -133,6 +135,53 @@ This state file records execution history, current status, decisions, deviations
 - Blockers:
   - Phase 1 may begin only when implementation timing is permitted and x402 diagnostic spending is approved.
 - Next exact action: On or after the permitted implementation start, query the live `ONCHAIN_TX_LOOKUP` discovery/OpenAPI and released H1 specification, then execute one paid Telegraph request and capture its signal to resolve `DEC-001` and `DEC-002`.
+
+### CP-001: Scoreability spike - read-only evidence collected (paid step pending)
+
+- Status: Partial
+- Date: 2026-08-17
+- Agent: Executor
+- Phase: Phase 1
+- Objective: Snapshot the live ONCHAIN_TX_LOOKUP request/answer/scoring surface and prepare the paid diagnostic calls that resolve DEC-001/DEC-002.
+- Work completed:
+  - Re-verified Track 1 is open (official start 2026-08-17 12:00 UTC) and the repo is on `main` with only plan/state committed.
+  - Snapshot live intents: ONCHAIN_TX_LOOKUP canonical; miner_count 2 (Verity 9001, VulnFeed 10001); both cost_per_call 0.00 and min_price_usdc 10000 ($0.01).
+  - Recorded Verity schema: input {chain, tx_hash}; output {chain, chain_id, tx_hash, status, from, to, value_wei, block_number, canonical (label), confidence, summary}. Signal mapping: label=canonical, confidence=confidence, reason=summary. No ERC-20 transfer-effect fields.
+  - Recorded VulnFeed schema: input {address}; output security report - off-intent for tx lookup.
+  - Confirmed ONCHAIN_TX_LOOKUP is Tier A (deterministic WASM exact match) from official Intents docs.
+  - Recorded x402 payment terms: $0.01/call, Base Sepolia USDC 0x036CbD53842c5426634e7929541eC2318f3dCF7e or Solana devnet, payTo 0x5a2324aA18613FAD4e44bDF0d6c73Ec1f6D87ff8, maxTimeoutSeconds 60, settles only on success. Same terms for direct and auto-routed ask.
+  - Retrieved signal-lookup shape via GET /engine/v1/signal/{hash} (signal + payload with request/response/timestamp).
+  - Paged 2,000 daemon questions: exactly 1 ONCHAIN_TX_LOOKUP row so far (2026-08-15, a misrouted news question answered by VulnFeed with a security report) - evidence the intent currently has no canonical question traffic.
+  - Checked scoring-script registry for the intent: all 5 registered candidates (all intents) rejected; no active canonical script exposed on the testnet; champion scorer is internal.
+  - Reviewed official scoring-module docs (WASM rank_answer(q, ground_truth, miner_answer) -> 0..1; Tier A exact match) and hackathon rules (75% normalized performance, 25% X, 3-Miner + 100-request guardrails).
+- Files or assets changed:
+  - `evidence/phase1/` created with 11 read-only snapshots and README summary.
+  - `PROJECT_STATE.md` updated with this entry.
+- Commands or checks run:
+  - `curl GET /engine/v1/intents`, `/engine/v1/intents/ONCHAIN_TX_LOOKUP`, `/engine/v1/intents/ONCHAIN_TX_LOOKUP/miners`
+  - `curl GET /api/miners?intent=ONCHAIN_TX_LOOKUP`
+  - `curl GET /engine/v1/intents/ONCHAIN_TX_LOOKUP/wasm`
+  - `curl POST /engine/v1/ask/9001` and `/engine/v1/ask` (no payment header; both returned the free 402 challenge)
+  - `curl GET /engine/v1/signal/0xd80947b6533d5d1c2dca3a9d4873092628e3779136002b073b6132238c0cc8e9`
+  - Paged `GET http://13.237.89.59:7044/daemon/api/questions` (2,000 rows)
+  - Read official docs: build-a-scoring-module, engine-ask, x402-inference, intents, hackathon rules; cloned Telegraph-api-docs OpenAPI specs.
+- Test results:
+  - No implementation tests exist yet (no production code in repo). All live probes returned documented results above.
+- Acceptance criteria verified:
+  - Not yet - paid response + signal hash still required. Read-only evidence is preserved and reproducible from `evidence/phase1/`.
+- Decisions:
+  - Draft DEC-001 (request shape): the canonical request accepted by the on-intent incumbent is a transaction reference {chain, tx_hash}; no expected-effect fields observed in any accepted schema.
+  - Draft DEC-002 (boundary): with no evidence the canonical ground truth includes normalized ERC-20 effects, the truthful default is branch 2 - Miner returns observed normalized facts; comparison vs expectation lives in the consumer. Final resolution pending the paid probe and official confirmation.
+  - No-go consequences understood: if paid probe or official scoring evidence shows ERC-20 effects are unrewarded, the approved Miner thesis pauses for an amendment (branch 3).
+- Deviations:
+  - None from plan. The paid-request step (plan line: "Perform a paid direct request and an auto-routed request") is sequenced after the wallet boundary, as planned.
+- Risks introduced:
+  - None executed; only read-only public API calls were made.
+- Known issues:
+  - ISSUE-004 (budget/spend cap) still open; ISSUE-001 (scoreability) partially informed by new evidence but not resolved; ISSUE-002 (question fields) partially informed by Verity/engine schemas.
+- Blockers:
+  - BLOCK-003: x402 spend cap not approved and test wallet not funded (Base Sepolia USDC + gas via official faucets require a user browser session).
+- Next exact action: After user approves the spend cap and funds the test wallet, run the documented paid probe (direct ask to Verity 9001 with a real finalized Base tx, then auto-routed ask), capture both signal hashes, compare results with independent Base RPC truth, and record the accepted schema + scoreability verdict for DEC-001/DEC-002.
 
 ## Decisions Made During Execution
 
@@ -245,4 +294,4 @@ Minor implementation details that do not change the approved contract belong onl
 
 ## Next Exact Action
 
-On or after the permitted implementation start, query the live `ONCHAIN_TX_LOOKUP` Miner schemas and released H1 specification, execute one paid Telegraph request, retrieve its signal, and record whether normalized ERC-20 effect fields affect official scoring so `DEC-001` and `DEC-002` can be resolved before full implementation.
+User approves the x402 diagnostic spend cap (recommended: 10 Base-Sepolia-USDC calls, $0.01 each, testnet only) and funds a throwaway Base Sepolia test wallet (official Circle USDC faucet + Base Sepolia gas faucet, browser session). Then run the documented paid probe: direct ask to Verity (9001, GET /lookup, {chain: base, tx_hash: <real finalized tx>}) and one auto-routed ask with a tx-reference query; capture both signal hashes via GET /engine/v1/signal/{hash}; compare with independent Base RPC truth; record the accepted schema and the scoreability verdict to resolve DEC-001/DEC-002.
