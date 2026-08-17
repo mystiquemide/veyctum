@@ -105,6 +105,26 @@ npm run test:integration  # live Base RPC integration tests
 npm run build        # tsc -> dist
 ```
 
+## Hackathon (Telegraph Season I, Hackathon 1) — how Track 1 is judged
+
+- The Miner track has **no demo-video submission portal**. The LIVE MINER IS the
+  submission: Telegraph validators continuously score our answers against the
+  canonical ground truth and rank us on the intent leaderboard.
+- Score = 100 points: **75% Normalized Performance** (our average canonical score
+  divided by the best miner's in ONCHAIN_TX_LOOKUP — the best miner in each
+  intent automatically gets full marks) and **25% Engagement & Transparency on X**
+  (evidence-led public updates tagging `@Telegraphprotoc`).
+- Cash eligibility guardrail for the intent: **at least 3 active miners** in
+  ONCHAIN_TX_LOOKUP (met: Verity 9001, VulnFeed 10001, Veyctum 9005, plus
+  DegenLens) **and at least 100 real requests from Track 3 applications**
+  (Aug 31–Sep 7). Self-run probes do not count toward this — it is Track 3 app
+  demand. Winners announced Sep 19–25.
+- Required by the rules: join the official Hackathon Discord; keep the Miner live
+  through the whole Track 3 window; never use mocked data; no metric gaming.
+- The demo video and this README are credibility/transparency artifacts for judges
+  and the X audience (the 25%), and for the Track 3 application — not a scored
+  upload.
+
 ## Security notes
 
 - Unknown request fields are rejected at the boundary.

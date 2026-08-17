@@ -78,6 +78,22 @@ This state file records execution history, current status, decisions, deviations
 - Deployment, YAML validation, registration, monitoring, and official scoring
 - Track 3 integrations, legitimate request collection, public updates, demo, and submission
 
+## Hackathon Rules Checklist (official rules reviewed 2026-08-17)
+
+Scoring is live-system behavior, not an uploaded submission. Live miner = the submission.
+
+- [x] Miner registered on-chain (registrationId 104) and ACTIVE (getMiner active=true)
+- [x] Stable URL https://veyctum.splitpot.xyz + hosted, hashed YAML (FR-027)
+- [x] Intent has >= 3 active miners (Verity 9001, VulnFeed 10001, Veyctum 9005, DegenLens)
+- [ ] Join the official Hackathon Discord (REQUIRED by rules, not done)
+- [ ] Generate real scored traffic so validators can rank us (75% Normalized Performance)
+- [ ] Start evidence-led X updates tagging @Telegraphprotoc (25% Engagement & Transparency)
+- [ ] Keep the Miner live and healthy through the full Track 3 window (Aug 31 - Sep 7)
+- [ ] >= 100 real requests from TRACK 3 APPLICATIONS (Aug 31 - Sep 7) for the cash-eligibility
+      guardrail - self-run probes do NOT count (BR-009/DEC-006 validity rules must be published first)
+- [ ] Demo video + proof console as 25%/credibility artifacts (not a scored upload)
+- [ ] No mocked data, no metric gaming (disqualifying)
+
 ## Checkpoint Log
 
 ### CP-000: Planning completed
@@ -364,7 +380,7 @@ This state file records execution history, current status, decisions, deviations
 
 ### CP-002E: Miner registered on-chain (Base Sepolia) - registrationId 104
 
-- Status: Complete (on-chain; discovery pending node rehydration)
+- Status: Complete (on-chain active; live discovery entry confirmed id 9005 via background poll; devnode public index is behind a wobbly proxy/cache so samples alternate - the authoritative state is the on-chain registry, which is active)
 - Date: 2026-08-17
 - Agent: Executor
 - Phase: Phase 2 - Registration checkpoint
@@ -383,7 +399,7 @@ This state file records execution history, current status, decisions, deviations
 - Deviations: None from plan.
 - Risks introduced: node discovery listing is pending - if the node rejects the YAML it will not appear; mitigation is updateMiner() with the already-verified YAML once diagnostics are available. Wallet now has nonce 1; 0.0086 ETH remaining (gas only usage).
 - Blockers: Discovery visibility pending node-side processing; no other blockers.
-- Next exact action: Once veyctum appears in /api/miners (activation_status active), run the paid auto-routed Engine ask with a tx-reference query and confirm routing includes Veyctum (or direct ask /engine/v1/ask/9005), capture the signal, then measure routed p95 (NFR-003 <= 15s). In parallel, register the diagnostic scoring module at integrate.telegraphprotocol.com (ISSUE-001).
+- Next exact action: Run the paid auto-routed Engine ask with a tx-reference query and confirm routing includes Veyctum (or direct ask /engine/v1/ask/9005), capture the signal, and measure routed p95 (NFR-003 <= 15s). In parallel: join the official Hackathon Discord (required by rules), and register the diagnostic scoring module at integrate.telegraphprotocol.com (ISSUE-001). Then start the evidence-led X thread tagging @Telegraphprotoc (25%).
 
 ## Decisions Made During Execution
 
