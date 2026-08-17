@@ -16,6 +16,27 @@ Paid-request evidence will be appended here after the x402 wallet step is approv
 | `x402_direct_ask_9001.json` | POST .../engine/v1/ask/9001 (no payment header) | 402 challenge: $0.01, eip155:84532 USDC 0x036CbD..., payTo 0x5a2324aA18613FAD4e44bDF0d6c73Ec1f6D87ff8, 60s |
 | `x402_auto_ask.json` | POST .../engine/v1/ask (no payment header) | Same terms for auto-routed ask |
 
+## Paid probe results (2026-08-17, $0.02 total on Base Sepolia USDC)
+
+| Probe | Endpoint | Result | Signal hash | Settlement tx (Base Sepolia) |
+|---|---|---|---|---|
+| Direct ask -> Verity (9001) | GET /lookup {chain: base, tx_hash: 0x373982c2...16a7} | 200; status confirmed_success, block 50101700, from/to/value match on-chain truth; NO ERC-20 effect fields | 0xbbe9906e1e09e357e9225f0c066e9c47732539e30f8da3c9d5e56a632cad98cf | 0x92fbb45dc6496cf061c5139130e5f0116a7d59ddbff18586d8becfa7424feb49 |
+| Auto-routed ask | query: "Look up the status, details and token transfer effects of Base transaction 0x373982c2...16a7" | 200; router classified ONCHAIN_TX_LOOKUP -> Verity (9001); identical result to direct | 0xb831d5774cacb1e75d12e6ce3672014d30343f5208994330775f61f21a5883fb | 0xa7285d28c9e6d66bfee4180fc4aad704b71c1b5c43ec199bb0bcc4a277049043 |
+
+Fixture ground truth (independent, public Base mainnet RPC): tx 0x373982c2...16a7
+block 50101700, status 0x1, from 0x4506de02..., to 0x2192bc3b..., value_wei 0,
+USDC (0x833589fC...) Transfer 237440081636 base units ($237,440.08) from 0x2192bc3b... to 0xb2cc224c....
+
+Key observations:
+- The engine preserves the miner's full structured JSON in the recorded signal payload
+  (custom fields survive verbatim; consumer-verifiable).
+- The on-intent incumbent returns NO ERC-20 transfer effect fields (no token address,
+  no token amount, no log data) - only chain|tx|status|block|from|to|value_wei.
+- Tier A deterministic scoring compares miner answer text against canonical ground truth;
+  the canonical scoring script for this intent is not yet active on the testnet
+  (all registered candidates rejected; champion internal).
+- Direct and auto-routed results are semantically equivalent for the same fixture.
+
 ## Key facts
 
 - ONCHAIN_TX_LOOKUP = Tier A deterministic WASM exact-match intent (official docs, Intents page).

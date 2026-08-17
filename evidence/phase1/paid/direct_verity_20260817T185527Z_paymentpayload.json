@@ -1,0 +1,32 @@
+{
+  "x402Version": 2,
+  "resource": {
+    "url": "http://devnode.telegraphprotocol.com/v1/ask/9001",
+    "description": "Payment required for direct subnet inference.",
+    "mimeType": "application/json"
+  },
+  "accepted": {
+    "scheme": "exact",
+    "network": "eip155:84532",
+    "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "amount": "10000",
+    "payTo": "0x5a2324aA18613FAD4e44bDF0d6c73Ec1f6D87ff8",
+    "maxTimeoutSeconds": 60,
+    "extra": {
+      "name": "USDC",
+      "version": "2"
+    }
+  },
+  "payload": {
+    "signature": "0x239ba31c8f2ea85d0d7848bf061d0bc2418c55eb470eb286c333fcbfa08dcddd01890393684317a75b4b503a9d4478675dd6cc2953bebdbafeec5e36f97a7f1c1c",
+    "authorization": {
+      "from": "0x65aE39Fd36f2a9Fa8d738A0FaC369c0CDc507a99",
+      "to": "0x5a2324aA18613FAD4e44bDF0d6c73Ec1f6D87ff8",
+      "value": "10000",
+      "validAfter": "1786992918",
+      "validBefore": "1786992983",
+      "nonce": "0xff484522c33658a711eeebdbe754e5b0620d13f99d91d2399af224ec763819c2"
+    }
+  },
+  "extensions": {}
+}
