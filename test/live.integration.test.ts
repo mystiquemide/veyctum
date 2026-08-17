@@ -39,4 +39,20 @@ describe('lookup states against real Base mainnet RPC (integration, FR-005/FR-01
     expect(probe.chain_id).toBe(8453);
     expect(probe.head).toBeTypeOf('bigint');
   }, 15000);
+
+  it('resolves a real Telegraph signal and extracts its tx hash (REV-009)', async () => {
+    const { TelegraphSignalClient } = await import('../src/telegraph.js');
+    const client = new TelegraphSignalClient('https://devnode.telegraphprotocol.com/engine/v1/signal/');
+    const signal = await client.fetchSignal('0xbbe9906e1e09e357e9225f0c066e9c47732539e30f8da3c9d5e56a632cad98cf');
+    expect(signal).not.toBeNull();
+    const { extractSignalTxHash } = await import('../src/telegraph.js');
+    expect(extractSignalTxHash(signal!)).toBe(HASH.toLowerCase());
+  }, 15000);
+
+  it('returns null for an unresolvable signal hash (REV-009)', async () => {
+    const { TelegraphSignalClient } = await import('../src/telegraph.js');
+    const client = new TelegraphSignalClient('https://devnode.telegraphprotocol.com/engine/v1/signal/');
+    const signal = await client.fetchSignal('0x' + '00'.repeat(32));
+    expect(signal).toBeNull();
+  }, 15000);
 });

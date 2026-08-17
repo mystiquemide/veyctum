@@ -91,6 +91,29 @@ describe('server surface (FR-025, FR-002)', () => {
     expect(res.statusCode).toBe(400);
     expect(res.json().tx_hash).toBe('');
   });
+
+  it('accepts >1KB POST bodies on /consumer (REV-011 bodyLimit)', async () => {
+    // >1 KB transport body with invalid action_id: bodyLimit must let it
+    // through and validation must reject it (400), not a 413.
+    const big = {
+      action_id: 'bad id with spaces',
+      expected: {
+        chain_id: 8453,
+        token: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
+        sender: '0x2192bc3b4028acc1113f2cd9ac2cba70c36520db',
+        recipient: '0xb2cc224c1c9fee385f8ad6a55b4d94e92359dc59',
+        raw_amount: '237440081636',
+      },
+      _pad: 'x'.repeat(2048),
+    };
+    const res = await app.inject({
+      method: 'POST',
+      url: '/consumer/actions',
+      payload: big,
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe('INVALID_INPUT');
+  });
 });
 
 describe('rate limiting (NFR-005, REV-002)', () => {

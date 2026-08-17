@@ -194,20 +194,21 @@ export class ConsumerStore {
           .run(input.reason, now, id);
       }
       // else outcome LOCKED: no change (retryable sponsor/verification error, FR-018).
+      // REV-010: the audit row is written inside the same transaction so a crash
+      // cannot leave a status change without its FR-019 audit entry.
+      this.recordAttempt(id, {
+        state: input.outcome,
+        reason: input.reason,
+        signalHash: input.signalHash,
+        minerId: input.minerId,
+        evidence: input.evidence,
+        now,
+      });
       this.db.exec('COMMIT');
     } catch (err) {
       this.db.exec('ROLLBACK');
       throw err;
     }
-
-    this.recordAttempt(id, {
-      state: input.outcome,
-      reason: input.reason,
-      signalHash: input.signalHash,
-      minerId: input.minerId,
-      evidence: input.evidence,
-      now,
-    });
 
     const updated = this.getAction(id);
     if (!updated) throw new ConsumerError('ACTION_NOT_FOUND', `action ${id} missing after resolve`);

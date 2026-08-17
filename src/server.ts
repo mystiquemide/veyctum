@@ -6,6 +6,7 @@ import { LookupError } from './errors.js';
 import { FixedWindowLimiter } from './rateLimit.js';
 import { ConsumerStore } from './consumerStore.js';
 import { registerConsumerRoutes } from './consumer.js';
+import { TelegraphSignalClient, type SignalFetcher } from './telegraph.js';
 
 /**
  * Miner API surface (FR-025, FR-002):
@@ -20,6 +21,7 @@ export async function buildApp(
   config: AppConfig,
   service: LookupService,
   consumerStore?: ConsumerStore,
+  signalClient?: SignalFetcher,
 ): Promise<FastifyInstance> {
   const limiter = new FixedWindowLimiter(config.RATE_LIMIT_PER_SEC, config.RATE_LIMIT_WINDOW_MS);
   const app = Fastify({
@@ -41,8 +43,10 @@ export async function buildApp(
     // Reject unknown query fields at the boundary (FR-002) instead of
     // silently stripping them (Fastify's default Ajv behavior).
     ajv: { customOptions: { removeAdditional: false } },
-    // NFR-005 hardening: GET-only API but bound the body and request lifetime.
-    bodyLimit: 1024,
+    // NFR-005 hardening: bound body and request lifetime. 64 KB so the
+    // /consumer verify POSTs (lookup-result sized bodies) are not rejected
+    // while still capping abuse (REV-011).
+    bodyLimit: 64 * 1024,
     connectionTimeout: 10_000,
     requestTimeout: 15_000,
   });
@@ -127,7 +131,8 @@ export async function buildApp(
   });
 
   if (consumerStore) {
-    registerConsumerRoutes(app, config, consumerStore);
+    const client = signalClient ?? new TelegraphSignalClient(config.TELEGRAPH_SIGNAL_API_URL, config.TELEGRAPH_SIGNAL_TIMEOUT_MS);
+    registerConsumerRoutes(app, service, consumerStore, client);
   }
 
   app.setErrorHandler((err, req, reply) => {

@@ -24,8 +24,14 @@ const envSchema = z.object({
   // NFR-005 / REV-002: rate limit declared in veyctum.yaml and enforced here.
   RATE_LIMIT_PER_SEC: z.coerce.number().int().min(1).max(1000).default(4),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(100).max(60000).default(1000),
-  // Consumer proof gate durable store (FR-015..FR-019); ':memory:' for tests.
+  // Consumer proof gate durable store (FR-015..FR-019); ':memory:' for tests
   CONSUMER_DB_PATH: z.string().default('./data/veyctum.db'),
+  // Telegraph Engine signal API used to verify release signals (BR-007, REV-009)
+  TELEGRAPH_SIGNAL_API_URL: z
+    .string()
+    .url()
+    .default('https://devnode.telegraphprotocol.com/engine/v1/signal/'),
+  TELEGRAPH_SIGNAL_TIMEOUT_MS: z.coerce.number().int().min(100).max(30000).default(5000),
   MINER_NAME: z.string().default('veyctum'),
   SCHEMA_VERSION: z.string().default(DEFAULT_SCHEMA_VERSION),
 });

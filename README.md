@@ -86,9 +86,12 @@ curl -X POST localhost:8080/consumer/actions -H 'content-type: application/json'
                "raw_amount":"237440081636"}
 }'
 
-# verify against a real lookup result (signal_hash required to release)
+# verify against the real loop: the server fetches the tx facts itself through
+# two independent Base RPCs, resolves the signal on the Telegraph Engine API,
+# cross-checks that the signal's recorded payload matches the observed effects,
+# and only then compares against the frozen expectation (REV-009).
 curl -X POST localhost:8080/consumer/actions/demo-1/verify -H 'content-type: application/json' -d '{
-  "lookup_result": {"state":"OK","effects":[{...}]},
+  "tx_hash": "0x373982c25ba2c56c52c30a6db4ea14f9af267d6152f09f14f0b9b43e842e16a7",
   "signal_hash": "0x...64hex...", "miner_id": "veyctum"
 }'
 ```

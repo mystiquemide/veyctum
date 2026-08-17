@@ -340,6 +340,28 @@ This state file records execution history, current status, decisions, deviations
 - Blockers: None for this checkpoint.
 - Next exact action: Restart the live miner on Node 24.19.0 with the rebuilt `dist/` (and fresh DB), then proceed to the registration checkpoint: stable URL (named tunnel veyctum.breachresponse.xyz on :8090 or Railway), finalize `veyctum.yaml` base_url, host YAML + preserve hash (FR-027), `registerMiner()` on Base Sepolia from the funded throwaway wallet, verify live discovery, then capture the registered routed Engine ask routed to Veyctum + routed p95 (NFR-003 <= 15s), and register the diagnostic scoring module at integrate.telegraphprotocol.com (ISSUE-001).
 
+### CP-002D: Trust-boundary hardening (REV-009/010/011) — consumer verify is now self-sufficient
+
+- Status: Complete
+- Date: 2026-08-17
+- Agent: Executor
+- Phase: Phase 2 - Complete a thin real routed lookup with inspectable proof
+- Objective: Close the three findings from the independent CP-002C re-review (CODE_REVIEW.md REV-009/010/011) so a release cannot be driven by caller-supplied or fabricated facts.
+- Work completed:
+  - REV-009 (High): the consumer verify endpoint no longer accepts a caller-supplied lookup_result. It now takes only `tx_hash` + `signal_hash`, fetches the observed effects itself through the two-provider RPC gateway (`service.lookup`), resolves the signal against the Telegraph Engine API (`src/telegraph.ts` TelegraphSignalClient), cross-checks that the signal's recorded payload matches the same transaction (`signalMatchesTx`) AND that its recorded effects equal the independently observed effects (`extractSignalEffects` + `effectsEqual`), and only then runs the comparator and transitions. Fabricated/unresolvable signal -> 502 SIGNAL_UNREACHABLE (stays LOCKED); tx or effect mismatch -> 422 SIGNAL_MISMATCH (stays LOCKED). README/.env.example updated (TELEGRAPH_SIGNAL_API_URL, TELEGRAPH_SIGNAL_TIMEOUT_MS).
+  - REV-010 (Low): `ConsumerStore.resolveAction` now writes the FR-019 audit INSERT inside the same transaction as the status change (BEGIN IMMEDIATE ... recordAttempt ... COMMIT), so a crash cannot leave a status change without its audit entry.
+  - REV-011 (Nit): Fastify bodyLimit raised 1024 -> 64 KB so /consumer verify POST bodies are not 413-rejected; regression test posts a >1 KB body and expects 400 from validation, not 413.
+  - New tests: `test/telegraph.test.ts` (signal parser: tx extraction, effects extraction, malformed handling, case-insensitive match, exact effect equality), reworked `test/consumer.test.ts` to the self-sufficient contract (10 cases incl. fabricated-signal 502, wrong-tx 422, effect-mismatch 422, old lookup_result shape rejected 400), bodyLimit regression in `test/server.test.ts`, and live integration tests that resolve a real Telegraph signal (0xbbe9906e...) and confirm tx extraction + unresolvable -> null.
+- Files or assets changed: `src/{telegraph (new),consumer,consumerStore,server,config,app}.ts`, `test/{telegraph (new),consumer,server,live.integration}.test.ts`, `.env.example`, `README.md`, `PROJECT_STATE.md`.
+- Commands or checks run: `tsc --noEmit` (0 errors), `vitest run` (61/61 hermetic), `vitest run -c vitest.integration.config.ts` (5/5 live incl. real signal resolution), `npm run build` (OK), live redeploy on :8090, adversarial probes over the public tunnel.
+- Test results: 66/66 tests across both suites.
+- Acceptance criteria verified: fabricated signal now fails closed (502, stays LOCKED - previously RELEASED); real Verity signal that tx-matches but carries no effects is refused for release (422 SIGNAL_MISMATCH, stays LOCKED); audit write atomic with status change; >1 KB consumer POST bodies accepted up to bodyLimit.
+- Decisions: Release proof requires the signal's recorded effects to exactly equal the independently observed effects - an incumbent signal that cannot express ERC-20 effects therefore cannot release a Veyctum-gated action (correct per BR-007).
+- Deviations: None from plan.
+- Risks introduced: Consumer verify now depends on the live Telegraph signal API (bounded 5s timeout, fail-closed on unresolvable); documented. Probe actions `fix-probe-1`/`fix-probe-2` and earlier `forgery-test`/`forgery-2` remain as LOCKED/records in the disposable demo DB (gitignored data/).
+- Blockers: None.
+- Next exact action: Registration checkpoint - stable URL (named tunnel veyctum.breachresponse.xyz on :8090 or Railway), finalize `veyctum.yaml` base_url, host YAML + preserve hash (FR-027), `registerMiner()` on Base Sepolia from the funded throwaway wallet, verify live discovery, then capture the registered routed Engine ask routed to Veyctum + routed p95 (NFR-003 <= 15s) - this produces the first real Veyctum signal, which the hardened consumer can then verify end-to-end. In parallel, register the diagnostic scoring module at integrate.telegraphprotocol.com (ISSUE-001).
+
 ## Decisions Made During Execution
 
 | ID | Date | Decision | Reason | Plan impact |
