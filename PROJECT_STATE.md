@@ -401,6 +401,29 @@ Scoring is live-system behavior, not an uploaded submission. Live miner = the su
 - Blockers: Discovery visibility pending node-side processing; no other blockers.
 - Next exact action: Run the paid auto-routed Engine ask with a tx-reference query and confirm routing includes Veyctum (or direct ask /engine/v1/ask/9005), capture the signal, and measure routed p95 (NFR-003 <= 15s). In parallel: join the official Hackathon Discord (required by rules), and register the diagnostic scoring module at integrate.telegraphprotocol.com (ISSUE-001). Then start the evidence-led X thread tagging @Telegraphprotoc (25%).
 
+### CP-002F: Real paid Telegraph request served by Veyctum + positive loop released (M2/M3 milestone)
+
+- Status: Complete
+- Date: 2026-08-17
+- Agent: Executor
+- Phase: Phase 2/3 boundary - registration checkpoint + positive operational loop
+- Objective: Prove the smallest real machine-to-machine loop through Telegraph served by Veyctum, and drive a real state transition via the self-sufficient consumer gate.
+- Work completed:
+  - Direct paid Engine ask to /engine/v1/ask/9005 (id 9005, OUR miner): Engine forwarded /lookup to https://veyctum.splitpot.xyz/lookup, Veyctum returned the full normalized effect (USDC 237440081636, sender/recipient/evidence, finality 6187 confirmations). cost 0.01, duration_ms 1663 (routed target <= 15s PASS).
+  - signal_hash 0x8b782fecb8b5f92e5e5c4307ede66b2a3b462bfbac6014ca9e289281ffb4ef50; resolves with miner_slug veyctum, subnet_id 9005, payload preserves the full miner JSON (recorded effects verbatim).
+  - Settlement verified (Payment-Response decoded): success true, payer 0x65ae39fd..., tx 0xc9af86610f2c58822b662c5adcad698a5ef7d02321f55c1f1ee1fba88bc6bde9 on Base Sepolia.
+  - Positive loop end-to-end: POST /consumer/actions (e2e-real-signal, fixture expectation) -> LOCKED; verify with tx_hash + the real signal_hash -> server-side live lookup + real signal resolution + effect equality -> comparator MATCHED -> RELEASED (released_by_signal = real signal), ~1.3s, once.
+  - This satisfies the winning invariant operationally: real paid Telegraph request -> real state transition, nothing caller-supplied trusted (REV-009 path).
+- Files or assets changed: `evidence/phase3/README.md` + `evidence/phase3/ask9005/*` (6 artifacts), `PROJECT_STATE.md`.
+- Commands or checks run: x402_probe.py direct ask 9005; signal lookup; settlement decode; consumer create+verify over https://veyctum.splitpot.xyz.
+- Test results: ask 200, signal resolves, settlement success=true, consumer RELEASED once.
+- Acceptance criteria verified: M2 (one paid Telegraph lookup returns a real Veyctum result + signal proof) complete; positive loop with a real finalized transfer releases exactly one protected action (SC-007 core) with a real signal.
+- Decisions: The direct ask (9005) is the deterministic proof path; auto-routed probabilistic routing is observed separately/optional.
+- Deviations: None from plan.
+- Risks introduced: None new. x402 spend now $0.04 of the $0.10 cap.
+- Blockers: None.
+- Next exact action: Run the negative-flow proof (Phase 4): a successful approval-only or wrong-recipient Base tx through the same real loop leaves a protected action LOCKED/REJECTED with a signal-backed reason (needs an approval-only or wrong-recipient real tx fixture + paid ask); then X engagement thread (25%), Discord signup, diagnostic scoring module (ISSUE-001), and Track 3 demand plan.
+
 ## Decisions Made During Execution
 
 | ID | Date | Decision | Reason | Plan impact |
