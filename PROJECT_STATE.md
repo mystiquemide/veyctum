@@ -3,9 +3,9 @@
 ## Project
 
 - Plan file: `PROJECT_PLAN.md`
-- Status: Phase 1 COMPLETE - scoreability spike passed on branch 2; Phase 2 not started
-- Current phase: Phase 1 - Prove Veyctum's semantic effects are a scoreable Telegraph capability (exit gate PASSED)
-- Current checkpoint: CP-001 (Complete)
+- Status: Phase 1 COMPLETE; Phase 2 in progress - CP-002A complete (scaffold + core Miner API), CP-002C (deploy + paid routed lookup) next
+- Current phase: Phase 2 - Complete a thin real routed lookup with inspectable proof
+- Current checkpoint: CP-002A (Complete); CP-002C (not started)
 - Last updated: 2026-08-17
 - Last agent: Executor
 - Planning confidence: 82/100 (Medium)
@@ -223,6 +223,50 @@ This state file records execution history, current status, decisions, deviations
   - None for Phase 1. BLOCK-001 cleared (branch 2 supported); BLOCK-003 cleared for the approved cap.
 - Next exact action: Phase 2 - scaffold the repository (pinned toolchain, CI, env schema, secret scanning), implement the Veyctum Miner API (strict validation, parallel RPC lookup, finality, Transfer-log normalization for allowlisted Base USDC), and register a diagnostic scoring module for ONCHAIN_TX_LOOKUP via the integration sandbox to expose the canonical ground-truth corpus.
 
+### CP-002A: Repository scaffold and core Miner API implemented (Phase 2)
+
+- Status: Complete
+- Date: 2026-08-17
+- Agent: Executor
+- Phase: Phase 2 - Complete a thin real routed lookup with inspectable proof
+- Objective: Establish the minimal repository structure (pinned toolchain, CI, env schema, secret scanning) and implement the first vertical slice of the Miner API so a valid finalized Base tx returns versioned normalized facts.
+- Work completed:
+  - Pinned toolchain per plan: Node 24 LTS (24.19.0 via nvm), TypeScript 7.0.2, Fastify 5.12.0, viem 2.55.16, Zod 4.4.3, Vitest 4.1.10, tsx 4.23.12; exact versions saved to package.json/lockfile (NFR-002).
+  - Created environment schema (Zod, strict) with fixed Base chain enforcement (FR-004, ADR-003), allowlisted USDC contract, independent RPC provider config, finality/confirmations, timeouts (src/config.ts). `.env.example` provided; `.env`/wallet files gitignored.
+  - Implemented strict request boundary (FR-002/FR-003): Zod + Fastify JSON schema reject unknown fields (removeAdditional:false) and malformed/non-base requests.
+  - Implemented parallel RPC gateway (FR-005): primary + fallback queried in parallel, critical-facts agreement, independent-response-only verdicts (ADR-005), per-provider timeout + total budget, TransactionNotFoundError mapped to explicit NOT_FOUND (all-provider agree), explicit RPC_DISAGREEMENT.
+  - Implemented finality gate (FR-006): documented configured confirmations, `PENDING` until reached.
+  - Implemented deterministic Transfer-log normalization (FR-007/FR-008/FR-014): allowlist by address, strict decoded Transfer logs, evidence per log, aggregation with bigint arithmetic, AMBIGUOUS on distinct triples.
+  - Implemented versioned response envelope (FR-009) with states from FR-010 and structured redacted logging (NFR-006).
+  - Added health/readiness endpoints (FR-025) and CI (github actions: typecheck, vitest, gitleaks secret scan).
+  - Added README (quick start, states, security notes).
+- Files or assets changed:
+  - `package.json`, `package-lock.json`, `tsconfig.json`, `.gitignore`, `.env.example`, `README.md`, `.github/workflows/ci.yml`
+  - `src/{config,schemas,errors,rpc,normalize,service,server,app,domain}.ts`
+  - `test/{schemas,normalize,server}.test.ts`
+- Commands or checks run:
+  - `npx tsc -p tsconfig.json --noEmit` -> 0 errors
+  - `npx vitest run` -> 18 passed (3 files): validation, normalization/aggregation, server boundary, plus live Base RPC integration for the CP-001 fixture and NOT_FOUND
+  - `npm run build` -> dist emitted; live smoke: `/health` 200, `/lookup?tx_hash=0x373982c2...16a7` 200 OK state with normalized effect (token 0x833589fcd6...02913, sender 0x2192bc3b..., recipient 0xb2cc224c..., raw_amount 237440081636, evidence block hash), 0.27s; malformed tx_hash -> 400 INVALID_INPUT
+- Test results:
+  - 18/18 pass; live integration against public Base mainnet RPC verified the CP-001 fixture returns the normalized USDC transfer effect that the incumbent (Verity) schema cannot express.
+- Acceptance criteria verified:
+  - Clean clone passes typecheck/tests (NFR-008) locally; CI configured to enforce in-repo.
+  - Explicit states present for the FR-010 set (NOT_FOUND verified live; REVERTED/PENDING/RPC_DISAGREEMENT/downstream covered by unit paths and integration once fixture corpus is added in CP-003's adversarial corpus).
+  - No secrets in repo (wallet key outside repo; env gitignored; gitleaks CI).
+- Decisions:
+  - RPC providers default: primary https://mainnet.base.org, fallback https://base.drpc.org (publicnode and llamarpc rejected live: receipt 403/invalid from this host; drpc verified working for all methods).
+  - Internal address normalization is lowercase (RPCs return lowercase; viem getAddress throws); display checksums only at the boundary.
+- Deviations:
+  - None from plan. tsx pinned at 4.23.12 (plan's 4.19.5 does not exist on npm); recorded on 2026-08-17.
+- Risks introduced:
+  - Public free RPC providers can rate-limit; DEC-003 (provider choice) formally open before registration.
+- Known issues:
+  - ISSUE-001 residual (canonical scorer activation) unchanged; deployment + paid routed lookup pending a hosting decision (DEC-004) and are the next sub-checkpoint.
+- Blockers:
+  - None.
+- Next exact action: CP-002C - deploy the Miner API to a hosting platform (user picks DEC-004), run one real paid routed Engine request through Telegraph to Veyctum, capture the signal hash, and measure direct vs routed p95 (NFR-003).
+
 ## Decisions Made During Execution
 
 | ID | Date | Decision | Reason | Plan impact |
@@ -334,4 +378,4 @@ Minor implementation details that do not change the approved contract belong onl
 
 ## Next Exact Action
 
-Phase 2 scaffold: pin the toolchain (Python 3.12, fastapi/uvicorn or equivalent chosen per repo convention, pinned lockfile), set up CI lint/typecheck/test, define the env schema and `.env.example`, and wire secret scanning. Then implement the first vertical slice of the Veyctum Miner API: strict request validation, parallel Base RPC lookup with agreement comparison, finality check, receipt validation, and deterministic Transfer-log normalization for allowlisted Base USDC (0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913), returning normalized facts + evidence. In parallel, register a diagnostic scoring module for ONCHAIN_TX_LOOKUP at integrate.telegraphprotocol.com to observe the canonical benchmark corpus and confirm whether ERC-20 effect fields are rewarded (resolves ISSUE-001 residual).
+CP-002C: user selects the hosting platform (DEC-004 - recommended Railway given existing Veyctum/Telegraph precedent, or Cloudflare Workers with a Node-compatible adapter); deploy the built Miner API (`npm run build` + start), verify live health/lookup; then run one real paid auto-routed Engine request that telegraphs to the deployed Veyctum endpoint (requires the Miner registered or a direct-to-endpoint Engine ask once YAML approved), capture the signal hash, and measure routed vs direct p95 (NFR-003 target: <=15s routed, <=5s direct p95). In parallel: validate the Miner YAML through the Telegraph integration sandbox (FR-026) and register a diagnostic scoring module for ONCHAIN_TX_LOOKUP to observe the canonical ground-truth corpus (ISSUE-001 residual).
