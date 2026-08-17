@@ -1,5 +1,6 @@
 version: "1"
 kind: miner
+id: 9005
 slug: veyctum
 protocol: generic
 name: Veyctum Transaction Effect Lookup
@@ -10,7 +11,7 @@ description: >
   success from fulfillment of the expected payment. Branch 2 boundary: the
   Miner returns observed facts; the consumer owns expectation comparison.
 
-base_url: https://veyctum.example.invalid   # set to the live deployment before registration
+base_url: https://veyctum.splitpot.xyz
 
 docs:
   repository: https://github.com/mystiquemide/veyctum
@@ -22,15 +23,9 @@ limitations:
     property: length
     value_num: 66
     operator: eq
-  - code: MAX_PARAM_SIZE
-    message: chain must be the fixed Base environment 'base' (ADR-003).
-    param: chain
-    property: enum
-    value_num: 1
-    operator: lte
 
 auth:
-  type: none          # public miner endpoint; a bearer header can be added on registration
+  type: none          # public miner endpoint; no API key required
 
 rate_limit_per_sec: 4 # enforced in code (NFR-005; fixed-window per IP, 429 + Retry-After)
 cache_ttl_sec: 0
@@ -39,6 +34,7 @@ circuit_cooldown_seconds: 20
 
 endpoints:
   - path: /lookup
+    external_path: /lookup
     method: GET
     description: Look up the observed ERC-20 transfer effects of a Base transaction.
     param_map:
@@ -100,3 +96,7 @@ semantics:
     reason_field: error_detail
   supported_intents:
     - ONCHAIN_TX_LOOKUP
+
+# YAML is public. No API keys or private credentials belong in this file.
+# Hosted copy: https://veyctum.splitpot.xyz/veyctum.yaml
+# SHA-256 is computed from the exact hosted bytes before registration.

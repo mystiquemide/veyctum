@@ -362,6 +362,29 @@ This state file records execution history, current status, decisions, deviations
 - Blockers: None.
 - Next exact action: Registration checkpoint - stable URL (named tunnel veyctum.breachresponse.xyz on :8090 or Railway), finalize `veyctum.yaml` base_url, host YAML + preserve hash (FR-027), `registerMiner()` on Base Sepolia from the funded throwaway wallet, verify live discovery, then capture the registered routed Engine ask routed to Veyctum + routed p95 (NFR-003 <= 15s) - this produces the first real Veyctum signal, which the hardened consumer can then verify end-to-end. In parallel, register the diagnostic scoring module at integrate.telegraphprotocol.com (ISSUE-001).
 
+### CP-002E: Miner registered on-chain (Base Sepolia) - registrationId 104
+
+- Status: Complete (on-chain; discovery pending node rehydration)
+- Date: 2026-08-17
+- Agent: Executor
+- Phase: Phase 2 - Registration checkpoint
+- Objective: Register Veyctum as a live Miner on the Telegraph MinerRegistry (Base Sepolia) with a stable hosted YAML, and verify the on-chain commitment.
+- Work completed:
+  - Resolved stable URL: https://veyctum.splitpot.xyz (Caddy reverse proxy on this VPS, port 8090; DNS A record on splitpot.xyz -> 159.69.241.122; Let's Encrypt cert). YAML hosted at https://veyctum.splitpot.xyz/veyctum.yaml (Caddy file server from /var/www/veyctum).
+  - Finalized veyctum.yaml: id 9005 (free; 9001-9004 Verity family, 10001 VulnFeed), base_url live, endpoint external_path added, signal_mapping/limitations cleaned; sha256 of exact hosted bytes = 0x8b29b2a6754922f81f7250bd36b17d418923716deebaa19515d3f4de69b35a52 (hosted==repo==hashed bytes verified).
+  - Read-only pre-flight: Diamond code exists at 0x5a2324aA... (== x402 payTo), getCanonicalIntents()=45 incl. ONCHAIN_TX_LOOKUP, isCanonicalIntent=true, registration wallet nonce 0, balance 0.009 ETH (gas only), simulateContract passed.
+  - Sent registerMiner(yamlUrl, yamlHash, fee=wallet, minPrice=10000, [ONCHAIN_TX_LOOKUP]) via viem + privateKeyToAccount from the throwaway wallet. Tx 0xd94ac235...7a95, block 45617652, status success, gasUsed 383781.
+  - MinerRegistered event decoded: registrationId 104, miner 0x65aE39Fd..., yamlUrl/hash as pinned, minPrice 10000, intents ONCHAIN_TX_LOOKUP. getMiner(104) read-back: active=true, intentId 0xb64a28c5...09e71.
+- Files or assets changed: `veyctum.yaml` (id 9005 + live base_url + external_path), `evidence/registration/README.md` (new), `PROJECT_STATE.md`, Caddyfile + /var/www/veyctum (system, outside repo), DNS record outside repo.
+- Commands or checks run: preflight-verify (read-only eth calls), register-veyctum script (simulate + broadcast + decode event + getMiner), sha256 diffs, curl endpoint checks.
+- Test results: registration tx success on-chain; registry active=true with intentId; discovery API not yet rehydrated at time of writing (node-side lag).
+- Acceptance criteria verified: yamlHash pinned (FR-027), hosted YAML URL live, Base Sepolia registration transaction confirmed, registration ID (104) + active state + intentId confirmed on-chain. Live discovery entry pending node rehydration.
+- Decisions: id 9005 chosen (9002 found already taken by Verity's weather miner during pre-flight id collision scan; re-hashed and re-pinned before broadcast).
+- Deviations: None from plan.
+- Risks introduced: node discovery listing is pending - if the node rejects the YAML it will not appear; mitigation is updateMiner() with the already-verified YAML once diagnostics are available. Wallet now has nonce 1; 0.0086 ETH remaining (gas only usage).
+- Blockers: Discovery visibility pending node-side processing; no other blockers.
+- Next exact action: Once veyctum appears in /api/miners (activation_status active), run the paid auto-routed Engine ask with a tx-reference query and confirm routing includes Veyctum (or direct ask /engine/v1/ask/9005), capture the signal, then measure routed p95 (NFR-003 <= 15s). In parallel, register the diagnostic scoring module at integrate.telegraphprotocol.com (ISSUE-001).
+
 ## Decisions Made During Execution
 
 | ID | Date | Decision | Reason | Plan impact |
