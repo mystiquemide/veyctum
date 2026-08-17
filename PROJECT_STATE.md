@@ -424,6 +424,29 @@ Scoring is live-system behavior, not an uploaded submission. Live miner = the su
 - Blockers: None.
 - Next exact action: Run the negative-flow proof (Phase 4): a successful approval-only or wrong-recipient Base tx through the same real loop leaves a protected action LOCKED/REJECTED with a signal-backed reason (needs an approval-only or wrong-recipient real tx fixture + paid ask); then X engagement thread (25%), Discord signup, diagnostic scoring module (ISSUE-001), and Track 3 demand plan.
 
+### CP-002G: Negative loop proven - successful tx, expected payment absent, action stayed blocked (M4 milestone)
+
+- Status: Complete
+- Date: 2026-08-17
+- Agent: Executor
+- Phase: Phase 4 - Enforce the invariant against a successful semantic failure
+- Objective: Show a real Base transaction that SUCCEEDED at the EVM level but did not produce the expected payment leaves the protected action blocked, backed by a real Telegraph signal.
+- Work completed:
+  - Scanned live Base mainnet via RPC and found a real approval-only tx: 0x5c8ea6c032bbba661648924da38a8ecf67bafcf92a8cc81ad58af000f7620994 (block 50108238, receipt success, USDC approve selector 0x095ea7b3, from 0x7726b398...).
+  - Veyctum /lookup on it: NO_SUPPORTED_TRANSFER, status success, effects [], finality reached.
+  - Paid Engine ask /engine/v1/ask/9005 for the negative tx: Veyctum served NO_SUPPORTED_TRANSFER (success, no effects), cost 0.01, duration_ms 1236. Signal 0x9ea3e072c53bf1904478b2388ae345991595e848924a580c670a92a9db5a87a0 (veyctum/9005, effects [] preserved in payload).
+  - Consumer negative flow: e2e-negative-real action (frozen fixture expectation) verified with the negative tx + real signal -> server lookup NO_SUPPORTED_TRANSFER + signal cross-check ([] == []) -> comparator NO_EFFECT -> REJECTED, released_by_signal null (blocked). Duplicate verify refused (refused_duplicate true), status stays REJECTED.
+  - The winning invariant worked live: "Transaction succeeded. Payment did not." with a real signal-backed rejection, not a crash (SC-008 / Phase 4).
+- Files or assets changed: `evidence/phase4/README.md` + `evidence/phase4/ask9005_negative/*` (6 artifacts), `PROJECT_STATE.md`.
+- Commands or checks run: RPC block scan for approve-only tx; /lookup; x402 paid ask 9005; consumer create/verify/dup-verify over https://veyctum.splitpot.xyz; signal lookup; settlement decode.
+- Test results: negative ask 200 + signal; consumer REJECTED once with reason; duplicate refused.
+- Acceptance criteria verified: SC-008 - a successful approval-only transaction never releases the protected action; rejection looks intentional (signal-backed), not a crash; replay/duplicate cannot flip (BR-008).
+- Decisions: Approval-only tx is the cleanest negative (receipt success, zero effects). Wrong-recipient/wrong-amount variants are covered by the comparator unit tests (WRONG_RECIPIENT/WRONG_AMOUNT) and can be demonstrated later with a second fixture if needed.
+- Deviations: None from plan.
+- Risks introduced: None new. x402 spend now $0.05 of the $0.10 cap.
+- Blockers: None.
+- Next exact action: The full positive + negative loop is proven. Remaining for win-readiness: (1) X engagement thread tagging @Telegraphprotoc with the evidence ledger (25%); (2) join official Hackathon Discord; (3) diagnostic scoring module at integrate.telegraphprotocol.com (ISSUE-001); (4) adversarial corpus + receipt-only baseline benchmark (FR-023/FR-024); (5) <180s uncut demo video; (6) Track 3 demand plan with published validity rules (BR-009/DEC-006).
+
 ## Decisions Made During Execution
 
 | ID | Date | Decision | Reason | Plan impact |

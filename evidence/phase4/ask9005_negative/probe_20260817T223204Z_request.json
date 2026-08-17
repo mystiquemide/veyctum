@@ -1,0 +1,8 @@
+{
+  "method": "GET",
+  "endpoint": "/lookup",
+  "payload": {
+    "chain": "base",
+    "tx_hash": "0x5c8ea6c032bbba661648924da38a8ecf67bafcf92a8cc81ad58af000f7620994"
+  }
+}
