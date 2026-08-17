@@ -1,0 +1,102 @@
+version: "1"
+kind: miner
+slug: veyctum
+protocol: generic
+name: Veyctum Transaction Effect Lookup
+description: >
+  Deterministic Base ERC-20 transaction effect lookup. Returns the observed
+  normalized transfer effects (token, semantic sender, recipient, raw amount)
+  with block/tx/log evidence, so consumers can distinguish EVM execution
+  success from fulfillment of the expected payment. Branch 2 boundary: the
+  Miner returns observed facts; the consumer owns expectation comparison.
+
+base_url: https://veyctum.example.invalid   # set to the live deployment before registration
+
+docs:
+  repository: https://github.com/mystiquemide/veyctum
+
+limitations:
+  - code: MAX_PARAM_SIZE
+    message: tx_hash must be a 32-byte EVM transaction hash (66 chars incl. 0x).
+    param: tx_hash
+    property: length
+    value_num: 66
+    operator: eq
+  - code: MAX_PARAM_SIZE
+    message: chain must be the fixed Base environment 'base' (ADR-003).
+    param: chain
+    property: enum
+    value_num: 1
+    operator: lte
+
+auth:
+  type: none          # public miner endpoint; a bearer header can be added on registration
+
+rate_limit_per_sec: 4 # conservative for public RPC quotas; enforce in code before registration
+cache_ttl_sec: 0
+circuit_threshold: 3
+circuit_cooldown_seconds: 20
+
+endpoints:
+  - path: /lookup
+    method: GET
+    description: Look up the observed ERC-20 transfer effects of a Base transaction.
+    param_map:
+      chain: chain
+      tx_hash: tx_hash
+
+input_schema:
+  type: object
+  properties:
+    chain:
+        type: string
+        enum:
+              - base
+    tx_hash:
+        type: string
+        pattern: ^0x[0-9a-fA-F]{64}$
+  required:
+    - tx_hash
+
+output_schema:
+  type: object
+  properties:
+    schema_version:
+        type: string
+    chain_id:
+        type: integer
+    tx_hash:
+        type: string
+    state:
+        type: string
+    status:
+        type: string
+    finality:
+        type: object
+    effects:
+        type: array
+        items:
+          type: object
+    evidence:
+        type: object
+    error_code:
+        type:
+              - string
+              - "null"
+    error_detail:
+        type:
+              - string
+              - "null"
+  required:
+    - schema_version
+    - chain_id
+    - tx_hash
+    - state
+    - status
+
+semantics:
+  signal_mapping:
+    label_field: state
+    reason_field: error_detail
+  supported_intents:
+    - ONCHAIN_TX_LOOKUP
