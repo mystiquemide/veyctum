@@ -167,7 +167,7 @@ paid direct and auto-routed probes. See `evidence/phase1/README.md`.
 
 1. **X engagement thread** (25% of score): evidence-led updates tagging
    `@Telegraphprotoc` — registration tx, signal hashes, settlements, the two-loop demo.
-2. **Join the official Hackathon Discord** (required by the rules).
+2. **Official Hackathon Discord**: joined (https://discord.gg/telegraphprotocol) — stay active for announcements.
 3. **Diagnostic scoring module** at integrate.telegraphprotocol.com to observe how the
    canonical ground truth scores our answers (ISSUE-001: scorer not yet active on testnet).
 4. **Adversarial corpus + receipt-only baseline benchmark** (FR-023/FR-024) with

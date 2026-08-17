@@ -85,7 +85,7 @@ Scoring is live-system behavior, not an uploaded submission. Live miner = the su
 - [x] Miner registered on-chain (registrationId 104) and ACTIVE (getMiner active=true)
 - [x] Stable URL https://veyctum.splitpot.xyz + hosted, hashed YAML (FR-027)
 - [x] Intent has >= 3 active miners (Verity 9001, VulnFeed 10001, Veyctum 9005, DegenLens)
-- [ ] Join the official Hackathon Discord (REQUIRED by rules, not done)
+- [x] Join the official Hackathon Discord (REQUIRED by rules - joined 2026-08-17 via https://discord.gg/telegraphprotocol)
 - [ ] Generate real scored traffic so validators can rank us (75% Normalized Performance)
 - [ ] Start evidence-led X updates tagging @Telegraphprotoc (25% Engagement & Transparency)
 - [ ] Keep the Miner live and healthy through the full Track 3 window (Aug 31 - Sep 7)
