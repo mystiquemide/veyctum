@@ -145,3 +145,35 @@ npm run build        # tsc -> dist
 
 `scripts/probe/x402_probe.py` is the reproducible Python client used to run the
 paid direct and auto-routed probes. See `evidence/phase1/README.md`.
+
+## Status & Roadmap (2026-08-17)
+
+### Live now
+
+- Miner **registered on-chain** (Base Sepolia, registrationId 104, id 9005), ACTIVE, at
+  https://veyctum.splitpot.xyz — a stable HTTPS URL via this VPS (Caddy, Let's Encrypt);
+  YAML hosted + SHA-256 pinned (`evidence/registration/README.md`).
+- **Positive loop proven**: paid Engine ask `/engine/v1/ask/9005` for a real Base
+  USDC transfer returned the normalized effect; consumer gate released the protected
+  action once, verified against the real Telegraph signal (`evidence/phase3/README.md`).
+- **Negative loop proven**: a real successful-but-approval-only Base tx
+  (`0x5c8ea6c0...`) left an action expecting the $237,440.08 payment REJECTED —
+  "Transaction succeeded. Payment did not." — with a signal-backed reason and no way
+  to flip it (`evidence/phase4/README.md`).
+- Registration + both loops carried actual x402 payment settlements on Base Sepolia
+  (spend ledger $0.05 / $0.10 Phase 1 cap).
+
+### Next steps
+
+1. **X engagement thread** (25% of score): evidence-led updates tagging
+   `@Telegraphprotoc` — registration tx, signal hashes, settlements, the two-loop demo.
+2. **Join the official Hackathon Discord** (required by the rules).
+3. **Diagnostic scoring module** at integrate.telegraphprotocol.com to observe how the
+   canonical ground truth scores our answers (ISSUE-001: scorer not yet active on testnet).
+4. **Adversarial corpus + receipt-only baseline benchmark** (FR-023/FR-024) with
+   committed raw results.
+5. **<180s uncut demo video** of the real positive + negative flow (for judges / the 25%).
+6. **Track 3 demand** (Aug 31–Sep 7): publish request-validity rules (BR-009) and drive
+   >= 100 real requests from Track 3 applications for the cash-eligibility guardrail.
+
+Keep the miner live and healthy through the whole Track 3 window (NFR-004).
