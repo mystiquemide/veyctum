@@ -447,6 +447,28 @@ Scoring is live-system behavior, not an uploaded submission. Live miner = the su
 - Blockers: None.
 - Next exact action: The full positive + negative loop is proven. Remaining for win-readiness: (1) X engagement thread tagging @Telegraphprotoc with the evidence ledger (25%); (2) join official Hackathon Discord; (3) diagnostic scoring module at integrate.telegraphprotocol.com (ISSUE-001); (4) adversarial corpus + receipt-only baseline benchmark (FR-023/FR-024); (5) <180s uncut demo video; (6) Track 3 demand plan with published validity rules (BR-009/DEC-006).
 
+### CP-002H: Canonical-format compatibility field + daemon-feed watcher (scored-traffic readiness)
+
+- Status: Complete
+- Date: 2026-08-17
+- Agent: Executor
+- Phase: Phase 5 prep - scoring alignment before canonical demand activates
+- Objective: Make Veyctum exact-match compatible with the intent's canonical ground truth and arm detection for the first real canonical questions, so we are format-ready + live when validator-scored traffic starts.
+- Work completed:
+  - Added src/canonical.ts: builds the canonical pipe string (chain|tx_hash|status|block_number|from|to|value_wei) from two-provider verified facts; status tokens confirmed_success / confirmed_reverted; returns null when finality or receipt status is unknown (pending/errors).
+  - Wired LookupResult.canonical into final states (OK, NO_SUPPORTED_TRANSFER, AMBIGUOUS, REVERTED) and null on pending/errors; pure code change so the hosted YAML hash (0x8b29b2a6...) stays valid - no re-registration.
+  - Compatibility proven EXACTLY: our canonical for the CP-001 fixture equals Verity's canonical string byte-for-byte (live evidence/phase1/paid response), asserted in unit (test/canonical.test.ts) and live integration tests, and confirmed live on https://veyctum.splitpot.xyz (base|0x373982c2...|confirmed_success|50101700|0x4506de02...|0x2192bc3b...|0).
+  - Added watch_daemon_questions.sh (untracked, in .git/info/exclude): polls http://13.237.89.59:7044/daemon/api/questions every 60s (max 120 min) and flags the first real ONCHAIN_TX_LOOKUP canonical questions. Currently confirms the intent is still cold (zero on-intent questions in the feed; Verity remains scored:false with 3 requests served).
+- Files or assets changed: src/{canonical (new),domain,service}.ts, test/{canonical (new),live.integration}.test.ts, PROJECT_STATE.md, README stays accurate (no YAML/on-chain change).
+- Commands or checks run: tsc --noEmit (0), vitest run (67/67), vitest -c integration (5/5), npm run build, redeploy on :8090, live /lookup returns canonical matching Verity, watcher started (proc_59132d07fa99).
+- Test results: 72/72 across suites; live canonical verified identical to incumbent.
+- Acceptance criteria verified: exact-match-format alignment with the incumbent for the shared fixture; watcher active; miner live on the stable URL serving the new field.
+- Decisions: Canonical token for a reverted tx uses a symmetric "confirmed_reverted" (not yet documented) - flagged for confirmation via the diagnostic scoring module / H1 spec in Discord, not asserted as ground truth. signal_mapping label_field stays `state` for now (canonical is in the response body regardless); switching YAML label_field to canonical would require a re-hash + updateMiner and is deferred until the ground-truth mapping is confirmed.
+- Deviations: None from plan.
+- Risks introduced: None. Spend unchanged ($0.05/$0.10).
+- Blockers: None. Scored traffic remains external (canonical question generation + scorer activation for the intent); our readiness is complete.
+- Next exact action: (1) confirm exact ground-truth format + reverted token via the diagnostic scoring module at integrate.telegraphprotocol.com or the H1 spec in Discord (ISSUE-001); (2) draft + post the X engagement thread with the evidence ledger (25%): registration tx, both loop signal hashes + settlements, canonical-compatibility claim, video link when ready; (3) <180s uncut demo video; (4) Track 3 demand plan + published validity rules (BR-009/DEC-006) ahead of Aug 31; (5) adversarial corpus + receipt-only baseline benchmark (FR-023/FR-024).
+
 ## Decisions Made During Execution
 
 | ID | Date | Decision | Reason | Plan impact |
