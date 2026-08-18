@@ -1,0 +1,14 @@
+title = "Veyctum secret scanning"
+
+[extend]
+useDefault = true
+
+# These are public Telegraph signal identifiers included as reproducible
+# hackathon evidence. They are not credentials or bearer tokens.
+[[allowlists]]
+description = "Public Telegraph signal hashes"
+regexTarget = "line"
+regexes = [
+  '''0x8b782fecb8b5f92e5e5c4307ede66b2a3b462bfbac6014ca9e289281ffb4ef50''',
+  '''0x9ea3e072c53bf1904478b2388ae345991595e848924a580c670a92a9db5a87a0''',
+]
