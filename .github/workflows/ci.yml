@@ -36,7 +36,21 @@ jobs:
       - name: Install pinned deps
         run: npm ci
       - name: Live Base RPC integration tests
-        run: npx vitest run -c vitest.integration.config.ts
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            echo "Live integration attempt ${attempt}/3"
+            if npx vitest run -c vitest.integration.config.ts; then
+              exit 0
+            fi
+
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 5))
+            fi
+          done
+
+          echo "Live integration failed after 3 attempts"
+          exit 1
 
   secrets:
     runs-on: ubuntu-latest
