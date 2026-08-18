@@ -42,7 +42,7 @@ Two independent Base RPC providers
       |
       | agree on chain + transaction + receipt
       v
-Finality + ERC-20 Transfer normalization
+Finality + canonical scoring field + ERC-20 Transfer normalization
       |
       v
 Observed effects + evidence
@@ -62,6 +62,18 @@ Consumer verifies signal against independently observed effects
 
 The Miner deliberately reports **observed facts**. The consumer owns the expected effect and the protected action. This keeps the intelligence reusable instead of baking one application's business rule into the Miner.
 
+### Canonical scoring compatibility
+
+`ONCHAIN_TX_LOOKUP` is deterministic, so Veyctum also emits a compact `canonical` field built from the independently verified transaction facts:
+
+```text
+chain|tx_hash|status|block_number|from|to|value_wei
+```
+
+For the shared live fixture, Veyctum's success-path canonical value is asserted by both unit and live integration tests to match the incumbent Verity format exactly. The richer normalized ERC-20 `effects[]` remain in the same response as the differentiator for downstream consumers.
+
+Current recorded test state: **67 hermetic + 5 live integration tests passing**.
+
 ## Real proof, not a mock
 
 The Telegraph Hackathon rules say the goal is evidence that the quality flywheel works in real conditions, not simply a polished demo. Veyctum's core claims are backed by real paid Telegraph requests, real signals, real Base transactions, and real x402 settlement.
@@ -70,6 +82,7 @@ The Telegraph Hackathon rules say the goal is evidence that the quality flywheel
 |---|---|
 | Miner registration | Miner `9005`, registration ID `104`, active on Base Sepolia |
 | Stable endpoint | `https://veyctum.splitpot.xyz` |
+| Canonical compatibility | Success-path canonical output matches the shared incumbent fixture exactly |
 | Positive paid request | Real Base USDC transfer served by Veyctum in `1663 ms` |
 | Positive signal | `0x8b782fecb8b5f92e5e5c4307ede66b2a3b462bfbac6014ca9e289281ffb4ef50` |
 | Positive consumer outcome | Protected action changed from `LOCKED` to `RELEASED` exactly once |
@@ -93,7 +106,7 @@ Telegraph's Miner track rewards verified intelligence that can be ranked and con
 
 1. **Request** — an application asks for intelligence about a Base transaction.
 2. **Infer** — Veyctum resolves and normalizes the transaction's actual transfer effects.
-3. **Validate** — Telegraph can evaluate the Miner output against canonical ground truth.
+3. **Validate** — Telegraph can evaluate the deterministic canonical output against ground truth.
 4. **Publish** — the result is preserved as a Telegraph signal.
 5. **Act** — a consumer independently verifies the signal before releasing or rejecting a protected action.
 6. **Settle** — paid requests use Telegraph's x402 settlement path.
@@ -118,6 +131,7 @@ chain_id
 tx_hash
 state
 status
+canonical
 finality
 effects[]
 evidence
@@ -225,7 +239,7 @@ Registration transaction:
 ## Repository map
 
 ```text
-src/                 Miner API, RPC agreement, effect normalization, consumer gate
+src/                 Miner API, RPC agreement, canonical output, effect normalization, consumer gate
 scripts/             Reproducible Telegraph/x402 probe utilities
 test/                Hermetic and live integration tests
 evidence/            Registration, paid-request, signal, settlement, and end-to-end proof
