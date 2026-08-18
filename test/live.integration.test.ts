@@ -24,6 +24,10 @@ describe('lookup states against real Base mainnet RPC (integration, FR-005/FR-01
     expect(fx!.raw_amount).toBe('237440081636');
     expect(fx!.sender.toLowerCase()).toBe('0x2192bc3b4028acc1113f2cd9ac2cba70c36520db');
     expect(fx!.recipient.toLowerCase()).toBe('0xb2cc224c1c9fee385f8ad6a55b4d94e92359dc59');
+    // Canonical-format compatibility: our pipe string must equal Verity's for the same tx.
+    expect(res.canonical).toBe(
+      'base|0x373982c25ba2c56c52c30a6db4ea14f9af267d6152f09f14f0b9b43e842e16a7|confirmed_success|50101700|0x4506de02071dcd46a22638aab6cd19e57e252e22|0x2192bc3b4028acc1113f2cd9ac2cba70c36520db|0',
+    );
   }, 20000);
 
   it('returns explicit NOT_FOUND for an unknown hash', async () => {

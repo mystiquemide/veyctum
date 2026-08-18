@@ -2,6 +2,7 @@ import { type Address } from 'viem';
 import type { AppConfig } from './config.js';
 import { BASE_CHAIN_ID, normalizeAddr, type LookupResult } from './domain.js';
 import { LookupError, stateToStatus, toLookupError } from './errors.js';
+import { canonicalOf } from './canonical.js';
 import type { ReadinessProbe } from './rpc.js';
 import { aggregateEffects, normalizeEffects } from './normalize.js';
 import { RpcGateway } from './rpc.js';
@@ -43,7 +44,7 @@ export class LookupService {
         reached: confirmations !== null && confirmations >= BigInt(required),
       };
 
-      const base: Omit<LookupResult, 'state' | 'status' | 'effects'> = {
+      const base: Omit<LookupResult, 'state' | 'status' | 'effects' | 'canonical'> = {
         schema_version: this.config.SCHEMA_VERSION,
         chain_id: BASE_CHAIN_ID,
         tx_hash: txHash,
@@ -58,33 +59,34 @@ export class LookupService {
           provider: primary.provider,
         },
       };
+      const canonical = canonicalOf(facts);
 
       if (!finality.reached) {
         // FR-006: definitely final facts only.
-        return { ...base, state: 'PENDING', status: 'pending', effects: [] };
+        return { ...base, canonical, state: 'PENDING', status: 'pending', effects: [] };
       }
 
       if (facts.status === null) {
         // REV-004: the block is deep enough to be final but the receipt is still
         // unavailable on the agreed provider view (indexing lag). This is not
         // evidence of "no transfer" - keep it PENDING rather than abstaining.
-        return { ...base, state: 'PENDING', status: 'pending', effects: [] };
+        return { ...base, canonical, state: 'PENDING', status: 'pending', effects: [] };
       }
 
       if (facts.status === 'reverted') {
         // BR-001: execution failure is a definitive semantic failure.
-        return { ...base, state: 'REVERTED', status: 'reverted', effects: [] };
+        return { ...base, canonical, state: 'REVERTED', status: 'reverted', effects: [] };
       }
 
       const effects = normalizeEffects(facts, normalizeAddr(this.config.USDC_CONTRACT) as Address);
       if (effects.length === 0) {
         // BR-006: no supported effect -> abstention, never inferred success.
-        return { ...base, state: 'NO_SUPPORTED_TRANSFER', status: 'success', effects: [] };
+        return { ...base, canonical, state: 'NO_SUPPORTED_TRANSFER', status: 'success', effects: [] };
       }
 
       const { aggregated, ambiguous } = aggregateEffects(effects);
       if (ambiguous) {
-        return { ...base, state: 'AMBIGUOUS', status: 'success', effects };
+        return { ...base, canonical, state: 'AMBIGUOUS', status: 'success', effects };
       }
 
       // A single normalized (token, sender, recipient) triple with exact
@@ -93,6 +95,7 @@ export class LookupService {
       // triple-uniqueness above; aggregation arithmetic is exercised by tests.
       return {
         ...base,
+        canonical,
         state: 'OK',
         status: 'success',
         effects,
@@ -105,6 +108,7 @@ export class LookupService {
         tx_hash: txHash,
         state: e.code,
         status: stateToStatus(e.code),
+        canonical: null,
         finality: { required_confirmations: this.config.REQUIRED_CONFIRMATIONS, confirmations: null, reached: false },
         effects: [],
         evidence: { block_number: null, block_hash: null, tx_from: null, tx_to: null, value_wei: null, receipt_status: null, provider: 'n/a' },

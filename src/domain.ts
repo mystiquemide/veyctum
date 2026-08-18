@@ -75,6 +75,9 @@ export interface LookupResult {
   tx_hash: string;
   state: LookupState;
   status: 'success' | 'reverted' | 'pending' | 'not_found' | 'error';
+  /** Canonical-format compatibility string (chain|tx|status|block|from|to|value);
+   * null when finality/status is not determinable (canonical.ts). */
+  canonical?: string | null;
   finality: FinalityInfo;
   effects: TransferEffect[];
   evidence: Evidence;
