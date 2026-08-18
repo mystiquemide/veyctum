@@ -10,3 +10,10 @@ data/
 *.pem
 **/wallet*.json
 **/*wallet*.json
+
+# Local/internal execution notes
+PROJECT_PLAN.md
+PROJECT_STATE.md
+HANDOFF.md
+MEMORY.md
+LEFT_OFF.md
