@@ -34,30 +34,27 @@ Veyctum closes that gap by reporting the actual supported transfer effects of th
 
 ## The mechanism
 
-```text
-Transaction hash
-      |
-      v
-Two independent Base RPC providers
-      |
-      | agree on chain + transaction + receipt
-      v
-Finality + canonical scoring field + ERC-20 Transfer normalization
-      |
-      v
-Observed effects + evidence
-      |
-      v
-Telegraph signal
-      |
-      v
-Consumer verifies signal against independently observed effects
-      |
-      +--> expected effect matches  -> RELEASED once
-      |
-      +--> definitive mismatch      -> REJECTED
-      |
-      +--> pending/disagreement     -> stays LOCKED
+```mermaid
+flowchart TD
+    A["Application submits Base transaction hash"] --> B["Telegraph Engine / x402"]
+    B --> C["Veyctum Miner 9005"]
+
+    C --> D1["Base RPC provider A"]
+    C --> D2["Base RPC provider B"]
+    D1 --> E{"Critical transaction facts agree?"}
+    D2 --> E
+
+    E -- "No" --> X["Fail closed<br/>RPC_DISAGREEMENT"]
+    E -- "Yes" --> F["Finality check + canonical scoring field<br/>+ ERC-20 Transfer normalization"]
+
+    F --> G["Observed effects + inspectable evidence"]
+    G --> H["Telegraph signal"]
+    H --> I["Consumer independently verifies<br/>signal + on-chain effects"]
+
+    I --> J{"Expected effect satisfied?"}
+    J -- "Exact match" --> K["RELEASED once"]
+    J -- "Definitive mismatch" --> L["REJECTED"]
+    J -- "Pending / disagreement" --> M["Remains LOCKED"]
 ```
 
 The Miner deliberately reports **observed facts**. The consumer owns the expected effect and the protected action. This keeps the intelligence reusable instead of baking one application's business rule into the Miner.
