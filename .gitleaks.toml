@@ -13,3 +13,9 @@ regexes = [
   '''0x9ea3e072c53bf1904478b2388ae345991595e848924a580c670a92a9db5a87a0''',
   '''0xe39910a3033965102effcac686b5f25e18e3a5121b5e6e5fe7c26d6b2cee4e69''',
 ]
+
+[[allowlists]]
+description = "Public paid Miner result artifacts; token addresses are not credentials"
+paths = [
+  '''evidence/phase5/ask9005/.*_(response|signal)\.json$''',
+]
