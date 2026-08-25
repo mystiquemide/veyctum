@@ -1,4 +1,3 @@
-import { BASE_CHAIN_NAME } from './domain.js';
 import type { TxFacts } from './rpc.js';
 
 /**
@@ -45,7 +44,7 @@ export function buildCanonical(
   ].join('|');
 }
 
-/** Convenience: build the canonical from the verified TxFacts bundle. */
-export function canonicalOf(facts: TxFacts): string | null {
-  return buildCanonical(BASE_CHAIN_NAME, facts.txHash, facts.status, facts.blockNumber, facts.from, facts.to, facts.value);
+/** Convenience: build the canonical from the verified TxFacts bundle + detected chain. */
+export function canonicalOf(facts: TxFacts, chain: string): string | null {
+  return buildCanonical(chain, facts.txHash, facts.status, facts.blockNumber, facts.from, facts.to, facts.value);
 }

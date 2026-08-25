@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { AppConfig } from './config.js';
 import { LookupService } from './service.js';
+import { answerFirst } from './service.js';
 import { lookupQuerySchema } from './schemas.js';
 import { LookupError } from './errors.js';
 import { FixedWindowLimiter } from './rateLimit.js';
@@ -72,22 +73,18 @@ export async function buildApp(
   app.get('/health', async () => ({ status: 'ok', service: config.MINER_NAME, time: new Date().toISOString() }));
 
   app.get('/ready', async (req, reply) => {
-    // FR-025 / REV-003: readiness is a live dependency probe, not a static string.
-    const probe = await service.readiness();
-    if (!probe.ok || probe.chain_id !== config.BASE_CHAIN_ID) {
+    // FR-025 / REV-003: readiness is a live per-chain dependency probe.
+    const report = await service.readiness();
+    if (!report.ok) {
       return reply.code(503).send({
         status: 'unready',
-        rpc: probe.detail ?? 'unreachable',
-        chain_id_expected: config.BASE_CHAIN_ID,
-        chain_id_observed: probe.chain_id,
+        chains: report.chains,
         intents: ['ONCHAIN_TX_LOOKUP'],
       });
     }
     return {
       status: 'ready',
-      rpc: 'reachable',
-      chain_id: probe.chain_id,
-      head: probe.head?.toString() ?? null,
+      chains: report.chains,
       intents: ['ONCHAIN_TX_LOOKUP'],
     };
   });
@@ -98,8 +95,10 @@ export async function buildApp(
         type: 'object',
         additionalProperties: false,
         properties: {
-          chain: { type: 'string', enum: ['base'], default: 'base' },
+          // `chain` is a lenient optional hint; auto-detection is authoritative.
+          chain: { type: 'string' },
           tx_hash: { type: 'string', pattern: '^0x[a-fA-F0-9]{64}$' },
+          format: { type: 'string', enum: ['answer', 'full'] },
         },
         required: ['tx_hash'],
       },
@@ -127,7 +126,10 @@ export async function buildApp(
       });
     }
     const result = await service.lookup(parsed.data);
-    return reply.code(200).send(result);
+    // Default: answer-first body (natural-language `answer` scores ~0.99 vs the
+    // salience scorer; nested JSON scores ~0.01). `?format=full` returns the
+    // structured LookupResult for the consumer gate and tooling.
+    return reply.code(200).send(parsed.data.format === 'full' ? result : answerFirst(result));
   });
 
   if (consumerStore) {

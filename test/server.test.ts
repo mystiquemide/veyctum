@@ -4,28 +4,29 @@ import { loadConfig } from '../src/config.js';
 import { buildApp } from '../src/server.js';
 import { LookupService } from '../src/service.js';
 import { ConsumerStore } from '../src/consumerStore.js';
+import type { ReadinessReport } from '../src/rpc.js';
 
 const HASH = '0x373982c25ba2c56c52c30a6db4ea14f9af267d6152f09f14f0b9b43e842e16a7';
 
-/** Service stub that simulates a healthy dependency probe without network. */
+/** Service stub that simulates a healthy per-chain probe without network. */
 class HealthyService extends LookupService {
   constructor() {
     super(loadConfig({}));
   }
 
-  override async readiness() {
-    return { ok: true, chain_id: 8453, head: 50101720n, provider: 'primary' };
+  override async readiness(): Promise<ReadinessReport> {
+    return { ok: true, chains: [{ name: 'base', ok: true, chain_id: 8453, head: '50101720' }] };
   }
 }
 
-/** Service stub that simulates an unreachable dependency probe without network. */
+/** Service stub that simulates an unreachable per-chain probe without network. */
 class DownService extends LookupService {
   constructor() {
     super(loadConfig({}));
   }
 
-  override async readiness() {
-    return { ok: false, chain_id: null, head: null, provider: 'primary', detail: 'probe timed out' };
+  override async readiness(): Promise<ReadinessReport> {
+    return { ok: false, chains: [{ name: 'base', ok: false, chain_id: null, head: null, detail: 'probe timed out' }] };
   }
 }
 
@@ -50,23 +51,26 @@ describe('server surface (FR-025, FR-002)', () => {
     expect(body.service).toBe('veyctum');
   });
 
-  it('GET /ready returns ready with the live chain id when the probe passes (FR-025/REV-003)', async () => {
+  it('GET /ready returns ready with per-chain reachability when the probe passes (FR-025/REV-003)', async () => {
     const res = await app.inject({ method: 'GET', url: '/ready' });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.status).toBe('ready');
-    expect(body.chain_id).toBe(8453);
-    expect(body.head).toBe('50101720');
+    const base = body.chains.find((c: { name: string }) => c.name === 'base');
+    expect(base.chain_id).toBe(8453);
+    expect(base.head).toBe('50101720');
     expect(body.intents).toContain('ONCHAIN_TX_LOOKUP');
   });
 
-  it('GET /ready returns 503 when the RPC dependency is unreachable (FR-025/REV-003)', async () => {
+  it('GET /ready returns 503 when no enabled chain is reachable (FR-025/REV-003)', async () => {
     const { app: downApp } = await makeApp(new DownService());
     const res = await downApp.inject({ method: 'GET', url: '/ready' });
     expect(res.statusCode).toBe(503);
     const body = res.json();
     expect(body.status).toBe('unready');
-    expect(body.chain_id_observed).toBeNull();
+    const base = body.chains.find((c: { name: string }) => c.name === 'base');
+    expect(base.ok).toBe(false);
+    expect(base.chain_id).toBeNull();
   });
 
   it('GET /lookup rejects malformed input without RPC calls (400 INVALID_INPUT)', async () => {
@@ -81,9 +85,11 @@ describe('server surface (FR-025, FR-002)', () => {
     expect(res.json().state).toBe('INVALID_INPUT');
   });
 
-  it('GET /lookup rejects a non-base chain', async () => {
-    const res = await app.inject({ method: 'GET', url: `/lookup?chain=ethereum&tx_hash=${HASH}` });
+  it('GET /lookup accepts a chain hint but still validates tx_hash (hermetic)', async () => {
+    // ethereum hint passes the schema; the malformed hash is rejected before any RPC call.
+    const res = await app.inject({ method: 'GET', url: '/lookup?chain=ethereum&tx_hash=0x1234' });
     expect(res.statusCode).toBe(400);
+    expect(res.json().state).toBe('INVALID_INPUT');
   });
 
   it('GET /lookup does not echo coerced non-string tx_hash (REV-007)', async () => {
