@@ -47,10 +47,18 @@ class FakeLookupService extends LookupService {
 function okLookup(effects: unknown[] = [FIXTURE_EFFECT]): LookupResult {
   return {
     schema_version: '1.0.0',
+    chain: 'base',
     chain_id: 8453,
     tx_hash: TX_HASH,
     state: 'OK',
     status: 'success',
+    summary: 'base transaction confirmed and succeeded.',
+    method: { selector: '0xa9059cbb', name: 'transfer', signature: 'transfer(address,uint256)', source: 'local', kind: 'contract_call' },
+    from: SENDER,
+    to: OTHER,
+    native_symbol: 'ETH',
+    native_value: '0',
+    sender_is_recipient: false,
     finality: { required_confirmations: 2, confirmations: 100, reached: true },
     effects: effects as LookupResult['effects'],
     evidence: {
@@ -62,8 +70,11 @@ function okLookup(effects: unknown[] = [FIXTURE_EFFECT]): LookupResult {
 
 function stateLookup(state: string): LookupResult {
   return {
-    schema_version: '1.0.0', chain_id: 8453, tx_hash: TX_HASH,
-    state: state as LookupState, status: 'error', finality: { required_confirmations: 2, confirmations: null, reached: false },
+    schema_version: '1.0.0', chain: 'unknown', chain_id: 8453, tx_hash: TX_HASH,
+    state: state as LookupState, status: 'error',
+    summary: 'unresolved', method: { selector: null, name: null, signature: null, source: 'none', kind: 'unknown' },
+    from: null, to: null, native_symbol: 'ETH', native_value: '0', sender_is_recipient: null,
+    finality: { required_confirmations: 2, confirmations: null, reached: false },
     effects: [], evidence: { block_number: null, block_hash: null, tx_from: null, tx_to: null, value_wei: null, receipt_status: null, provider: 'n/a' },
   };
 }

@@ -18,6 +18,7 @@ function fixtureFacts(overrides: Partial<TxFacts> = {}): TxFacts {
     from: FROM,
     to: TO,
     value: 0n,
+    input: '0x',
     status: 'success',
     logs: [],
     ...overrides,
@@ -31,7 +32,7 @@ describe('buildCanonical (Tier A exact-match compatibility)', () => {
   });
 
   it('canonicalOf(facts) produces the same Compat string', () => {
-    expect(canonicalOf(fixtureFacts())).toBe(VERITY_CANONICAL_FIXTURE);
+    expect(canonicalOf(fixtureFacts(), 'base')).toBe(VERITY_CANONICAL_FIXTURE);
   });
 
   it('uses a symmetric token for reverted execution', () => {

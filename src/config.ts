@@ -10,17 +10,26 @@ import {
 const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).default(8080),
   HOST: z.string().default('0.0.0.0'),
+  // Base identity retained for the Base-only consumer proof gate + USDC effects.
   BASE_CHAIN_ID: z.coerce.number().int().default(BASE_CHAIN_ID),
   BASE_CHAIN_NAME: z.string().default(BASE_CHAIN_NAME),
   USDC_CONTRACT: z
     .string()
     .regex(/^0x[a-fA-F0-9]{40}$/, 'USDC_CONTRACT must be a valid EVM address')
     .default(USDC_CONTRACT),
-  RPC_URL_PRIMARY: z.string().url().default('https://mainnet.base.org'),
-  RPC_URL_FALLBACK: z.string().url().default('https://base.drpc.org'),
+  // Multi-chain auto-detection: comma list of chain names (see chains.ts).
+  // Per-chain RPC overrides come from RPC_<NAME>_PRIMARY / RPC_<NAME>_FALLBACK.
+  ENABLED_CHAINS: z.string().default('ethereum,base'),
   REQUIRED_CONFIRMATIONS: z.coerce.number().int().min(1).default(2),
   RPC_TIMEOUT_MS: z.coerce.number().int().min(100).default(4000),
-  LOOKUP_BUDGET_MS: z.coerce.number().int().min(100).max(8000).default(8000),
+  LOOKUP_BUDGET_MS: z.coerce.number().int().min(100).max(15000).default(9000),
+  // Called-method decoding: local signature DB first, optional 4byte.directory fallback.
+  FOURBYTE_ENABLED: z
+    .string()
+    .default('true')
+    .transform((v) => v.toLowerCase() !== 'false'),
+  FOURBYTE_URL: z.string().url().default('https://www.4byte.directory/api/v1/signatures/'),
+  FOURBYTE_TIMEOUT_MS: z.coerce.number().int().min(100).max(5000).default(1200),
   // NFR-005 / REV-002: rate limit declared in veyctum.yaml and enforced here.
   RATE_LIMIT_PER_SEC: z.coerce.number().int().min(1).max(1000).default(4),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(100).max(60000).default(1000),
@@ -39,10 +48,5 @@ const envSchema = z.object({
 export type AppConfig = z.infer<typeof envSchema>;
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
-  const cfg = envSchema.parse(env);
-  if (cfg.BASE_CHAIN_ID !== BASE_CHAIN_ID) {
-    // FR-004: Miner binds to the configured Base environment only (ADR-003).
-    throw new Error(`BASE_CHAIN_ID must be ${BASE_CHAIN_ID} (Base mainnet) for H1`);
-  }
-  return cfg;
+  return envSchema.parse(env);
 }

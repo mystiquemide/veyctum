@@ -37,12 +37,30 @@ describe('lookup states against real Base mainnet RPC (integration, FR-005/FR-01
     expect(res.status).toBe('not_found');
   }, 20000);
 
-  it('readiness probe reports the live Base chain id (FR-025)', async () => {
-    const probe = await svc.readiness();
-    expect(probe.ok).toBe(true);
-    expect(probe.chain_id).toBe(8453);
-    expect(probe.head).toBeTypeOf('bigint');
-  }, 15000);
+  it('auto-detects Ethereum and decodes the called method for a real scored tx (multi-chain)', async () => {
+    // The live ONCHAIN_TX_LOOKUP scored corpus is Ethereum method/contract questions.
+    const res = await svc.lookup({
+      tx_hash: '0xb376975e90801e36a34432c960825a0c12a56d589a77a95aa552a7a3618678ee',
+    });
+    expect(res.chain).toBe('ethereum');
+    expect(res.chain_id).toBe(1);
+    expect(res.status).toBe('success');
+    expect(res.method.name).toBe('bridgeERC20To');
+    expect(res.to?.toLowerCase()).toBe('0x99c9fc46f92e8a1c0dec1b1747d010903e884be1');
+    expect(res.evidence.tx_from?.toLowerCase()).toBe('0x2ce910fbba65b454bbaf6a18c952a70f3bcd8299');
+    expect(res.evidence.block_number).toBe('25700000');
+    expect(res.summary).toContain('bridgeERC20To');
+    expect(res.summary).toContain('block 25700000');
+  }, 25000);
+
+  it('readiness probe reports live per-chain reachability incl. Base (FR-025)', async () => {
+    const report = await svc.readiness();
+    expect(report.ok).toBe(true);
+    const base = report.chains.find((c) => c.name === 'base');
+    expect(base?.ok).toBe(true);
+    expect(base?.chain_id).toBe(8453);
+    expect(typeof base?.head).toBe('string');
+  }, 20000);
 
   it('resolves a real Telegraph signal and extracts its tx hash (REV-009)', async () => {
     const { TelegraphSignalClient } = await import('../src/telegraph.js');

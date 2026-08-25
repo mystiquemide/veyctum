@@ -69,12 +69,40 @@ export interface Evidence {
   fetched_at?: string;
 }
 
+/** Transaction shape derived from calldata + recipient presence. */
+export type TxKind = 'contract_call' | 'native_transfer' | 'contract_creation' | 'unknown';
+
+/** Decoded called method for the ONCHAIN_TX_LOOKUP answer (methods.ts). */
+export interface MethodInfo {
+  /** 0x + 8-hex function selector, or null for native transfers / creations. */
+  selector: string | null;
+  /** Decoded method name (e.g. "bridgeERC20To"), or null when unknown. */
+  name: string | null;
+  /** Full text signature when known (e.g. "transfer(address,uint256)"). */
+  signature: string | null;
+  source: 'local' | '4byte' | 'none';
+  kind: TxKind;
+}
+
 export interface LookupResult {
   schema_version: string;
+  /** Detected chain name (auto-detected from the tx_hash), e.g. "ethereum". */
+  chain: string;
   chain_id: number;
   tx_hash: string;
   state: LookupState;
   status: 'success' | 'reverted' | 'pending' | 'not_found' | 'error';
+  /** Comprehensive human-readable answer carrying every scored fact (summary.ts). */
+  summary: string;
+  /** Called-method decode (selector, name, kind). */
+  method: MethodInfo;
+  /** Convenience top-level facts (mirrored from evidence) for scorer token overlap. */
+  from: string | null;
+  to: string | null;
+  native_symbol: string;
+  /** Native value in whole units (decimal string, e.g. "0"). */
+  native_value: string;
+  sender_is_recipient: boolean | null;
   /** Canonical-format compatibility string (chain|tx|status|block|from|to|value);
    * null when finality/status is not determinable (canonical.ts). */
   canonical?: string | null;

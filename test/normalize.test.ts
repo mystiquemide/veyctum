@@ -41,6 +41,7 @@ function facts(logs: TxFacts['logs']): TxFacts {
     from: OTHER,
     to: SENDER,
     value: 0n,
+    input: '0x',
     status: 'success',
     logs,
   };
