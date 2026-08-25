@@ -3,7 +3,7 @@
 ## Project
 
 - Plan file: `PROJECT_PLAN.md`
-- Status: CP-002L COMPLETE - submission-ready live Miner. Veyctum is active as Miner 9005, the current Base Sepolia registration is 213, the hosted manifest matches the repository hash, and Telegraph has served a real paid full-mode request with signal-backed evidence. Discovery reports Miner 9005 active, scored, rank 1 for ONCHAIN_TX_LOOKUP (epoch 276, score 0.01198229). CI is green on the latest commit. Remaining work is submission packaging and any Track 3 demand/engagement requirements.
+- Status: CP-002L COMPLETE - submission-ready live Miner. Veyctum is active as Miner 9005 through Explorer registration 104, the hosted manifest matches the repository hash, and Telegraph has served a real paid full-mode request with signal-backed evidence. Discovery reports Miner 9005 active, scored, rank 1 for ONCHAIN_TX_LOOKUP (epoch 276, score 0.01198229). Replacement registration 213 exists on-chain but is rejected because its YAML URL was stored as `veyctum` instead of the full HTTPS URL. CI is green on the latest commit. Remaining work is submission packaging and any Track 3 demand/engagement requirements.
 - Current phase: Submission readiness - evidence, demo, engagement, and Track 3 demand
 - Current checkpoint: CP-002L (Complete)
 - Last updated: 2026-08-25
@@ -44,8 +44,8 @@ This state file records execution history, current status, decisions, deviations
 - Phase: Phase 6-8 - live multi-chain answer-first miner; win-readiness (engagement, demo, Track 3 demand)
 - Checkpoint: CP-002K (Complete)
 - Goal: Submit a truthful, reproducible Telegraph Miner with live proof. The multi-chain answer-first pivot is deployed and live; the Base USDC consumer gate and positive/negative semantic-payment proofs remain available through full mode.
-- Prerequisites: Phases 1-2 complete; DEC-003/DEC-004 resolved; current manifest committed in registration 213; paid proof captured after the current registration.
-- Next exact action: Add the live URL, repository, Miner 9005, registration 213, current manifest hash, and paid signal to the hackathon portal; record the short demo and publish the evidence-led X update; keep the service healthy through the Track 3 window.
+- Prerequisites: Phases 1-2 complete; DEC-003/DEC-004 resolved; active Explorer registration 104 / Miner 9005; paid proof captured through Miner 9005. Registration 213 is rejected historical metadata and must not be used for submission.
+- Next exact action: Add the live URL, repository, Miner 9005, Explorer registration 104, current manifest hash, and paid signal to the hackathon portal; record the short demo and publish the evidence-led X update; keep the service healthy through the Track 3 window.
 
 ## Current Status
 
@@ -553,8 +553,8 @@ Scoring is live-system behavior, not an uploaded submission. Live miner = the su
 - Objective: Reconcile the current manifest and registration, prove the paid Telegraph path after re-registration, and leave the repository/CI in a submission-ready state.
 - Work completed:
   - Published the current multi-chain answer-first manifest and verified the hosted SHA-256 matches the repository: `3191ebf32c287925d197d56214450106aa610738223d45cc210f206da64484c8`.
-  - Broadcast replacement Base Sepolia registration transaction `0xfb1a5f22259d6096f664a03048b53b1c5a8e27a2a1e7e28cdf1a3a02680afdbd`; receipt succeeded and assigned registration ID `213`. Miner/subnet ID remains `9005`; legacy registration `104` remains recorded.
-  - Confirmed Telegraph discovery lists Miner `9005` active and scored: epoch `276`, rank `1`, score `0.01198229`, total requests served `6`.
+  - Broadcast replacement Base Sepolia registration transaction `0xfb1a5f22259d6096f664a03048b53b1c5a8e27a2a1e7e28cdf1a3a02680afdbd`; receipt succeeded and assigned registration ID `213`, but Explorer rejected it because its YAML URL was `veyctum` (unsupported protocol scheme). This did not replace or damage active Explorer registration `104`.
+  - Confirmed Telegraph discovery lists Miner `9005` / Explorer registration `104` active and scored: epoch `276`, rank `1`, score `0.01198229`, total requests served `6`.
   - Ran the direct x402 probe against `POST /engine/v1/ask/9005` using the stored Base Sepolia test wallet. Paid `$0.01` USDC, received HTTP `200`, duration `1444 ms`, and signal `0xe39910a3033965102effcac686b5f25e18e3a5121b5e6e5fe7c26d6b2cee4e69`.
   - Preserved paid request/challenge/payment-payload/response/signal artifacts under `evidence/phase5/ask9005/` and added a concise evidence README.
   - Fixed Gitleaks false positives for public token addresses and test fixtures; latest CI run is green for secrets, check, and integration.
@@ -563,12 +563,12 @@ Scoring is live-system behavior, not an uploaded submission. Live miner = the su
 - Commands or checks run: live `/health`, `/ready`, `/lookup`, hosted-manifest hash check, Base Sepolia registration simulation + broadcast + receipt, Telegraph discovery query, direct x402 probe, `npm test` (85 pass), `npm run typecheck`, production build, Gitleaks CI, and all three latest CI jobs.
 - Test results: 85 hermetic tests passed; 6 live integration tests passed; typecheck/build passed; latest CI run `32903546399` passed secrets, check, and integration.
 - Acceptance criteria verified: current manifest parity PASS; replacement registration PASS; paid post-registration Miner response and signal PASS; live scored discovery PASS; CI/repository quality gates PASS.
-- Decisions: use Miner ID `9005` as the public protocol identifier; cite registration `213` as the current on-chain registration and `104` as legacy history; use the direct x402 probe for Telegraph payments rather than OKX tooling.
-- Deviations: the current registration is represented by a new on-chain ID (`213`) while Telegraph discovery still resolves the active Miner by subnet/Miner ID (`9005`); this is documented rather than conflated.
+- Decisions: use Miner ID `9005` and active Explorer registration `104` as the public submission identity; cite `213` only as a rejected replacement attempt; use the direct x402 probe for Telegraph payments rather than OKX tooling.
+- Deviations: a replacement registration was broadcast with a malformed YAML URL and rejected by the dispatcher. The original registration `104` remains the active scored integration.
 - Risks introduced: no new production risk; public paid result JSON is allowlisted narrowly in Gitleaks because it contains public contract/token addresses.
 - Known issues: Track 3 validity rules, X engagement, demo video, and final portal submission remain external submission tasks; `.qwen/` and `evidence/scoring/` remain local untracked paths and are not part of the latest commits.
 - Blockers: none technical.
-- Next exact action: submit the live Miner evidence to the hackathon portal, record the <180s demo, publish the evidence-led X update, and keep `/ready` healthy through the Track 3 window.
+- Next exact action: submit using Miner `9005` / Explorer registration `104`, record the <180s demo, publish the evidence-led X update, and keep `/ready` healthy through the Track 3 window.
 
 ## Decisions Made During Execution
 
