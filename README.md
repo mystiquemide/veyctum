@@ -11,7 +11,7 @@
 Veyctum takes a transaction hash, auto-detects which chain it lives on, and returns a direct natural-language answer plus inspectable evidence. For Base USDC it normalizes the actual token-transfer effect, so a consumer can separate execution success from payment fulfillment and act on the observed state change instead of trusting `receipt.status == 1`.
 
 **Live Miner:** https://veyctum.splitpot.xyz
-**Telegraph Miner ID:** `213` (replacement registration; legacy ID `9005` remains active during node rehydration)
+**Telegraph Miner ID:** `9005`
 **Intent:** `ONCHAIN_TX_LOOKUP`
 **Chains:** Ethereum (`1`) and Base (`8453`), auto-detected from the transaction hash
 **Telegraph registration:** Base Sepolia, registration ID `213`
@@ -146,7 +146,7 @@ The Telegraph Hackathon rules ask for evidence that the quality flywheel works i
 
 | Proof | Result |
 |---|---|
-| Miner registration | Replacement Miner registration `213`, active on Base Sepolia; legacy registration `104` remains recorded on-chain |
+| Miner registration | Current on-chain registration `213` for Miner `9005`, active on Base Sepolia; legacy registration `104` remains recorded on-chain |
 | Stable endpoint | `https://veyctum.splitpot.xyz` |
 | Multi-chain answer | Ethereum transaction method and contract decoded and answered; covered by live integration tests |
 | Canonical compatibility | Success-path canonical output matches the shared Base fixture exactly |
@@ -275,7 +275,7 @@ The hermetic suite does not require network access. Integration tests exercise l
 
 ## Telegraph registration artifact
 
-[`veyctum.yaml`](./veyctum.yaml) is the current Miner manifest. It declares multi-chain auto-detection, answer-first scoring output, and explicit full mode for effect verification. Registration `213` committed the current hosted bytes. Telegraph discovery may temporarily continue to show legacy registration `9005` while its node-side registry rehydrates.
+[`veyctum.yaml`](./veyctum.yaml) is the current Miner manifest. It declares multi-chain auto-detection, answer-first scoring output, and explicit full mode for effect verification. Registration `213` committed the current hosted bytes for Miner `9005`. Telegraph discovery may temporarily continue to show the older registration record while its node-side registry rehydrates.
 
 Hosted manifest: https://veyctum.splitpot.xyz/veyctum.yaml
 
