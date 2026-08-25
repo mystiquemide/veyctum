@@ -2,7 +2,7 @@
   "name": "veyctum",
   "version": "0.1.0",
   "private": true,
-  "description": "Telegraph ONCHAIN_TX_LOOKUP Miner: normalized Base ERC-20 transfer effects with inspectable evidence",
+  "description": "Telegraph ONCHAIN_TX_LOOKUP Miner: multi-chain transaction lookup with method decode, normalized Base ERC-20 effects, and inspectable evidence",
   "type": "module",
   "engines": {
     "node": ">=24"
