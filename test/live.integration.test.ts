@@ -73,7 +73,7 @@ describe('lookup states against real Base mainnet RPC (integration, FR-005/FR-01
   it('resolves a real Telegraph signal and extracts its tx hash (REV-009)', async () => {
     const { TelegraphSignalClient } = await import('../src/telegraph.js');
     const client = new TelegraphSignalClient('https://devnode.telegraphprotocol.com/engine/v1/signal/');
-    const signal = await client.fetchSignal('0xbbe9906e1e09e357e9225f0c066e9c47732539e30f8da3c9d5e56a632cad98cf');
+    const signal = await client.fetchSignal('0x8b782fecb8b5f92e5e5c4307ede66b2a3b462bfbac6014ca9e289281ffb4ef50');
     expect(signal).not.toBeNull();
     const { extractSignalTxHash } = await import('../src/telegraph.js');
     expect(extractSignalTxHash(signal!)).toBe(HASH.toLowerCase());

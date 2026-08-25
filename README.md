@@ -2,19 +2,32 @@
 
 [![CI](https://github.com/mystiquemide/veyctum/actions/workflows/ci.yml/badge.svg)](https://github.com/mystiquemide/veyctum/actions/workflows/ci.yml)
 
-**A Telegraph `ONCHAIN_TX_LOOKUP` Miner that answers what an EVM transaction actually did, in plain language, with inspectable evidence.**
+**Veyctum is an effect oracle for autonomous actions: a Telegraph `ONCHAIN_TX_LOOKUP` Miner that turns an EVM transaction hash into verified facts and tells a consumer whether the expected payment effect actually happened.**
 
 > **Transaction succeeded. Payment did not.**
 >
 > A successful EVM receipt is not proof that the effect a caller expected happened.
 
-Veyctum takes a transaction hash, auto-detects which chain it lives on, and returns a direct natural-language answer: which method was called, on which contract, from whom, how much native value moved, and whether it succeeded. For Base USDC it also normalizes the actual token-transfer effect, so a consumer can separate execution success from payment success and act on the observed state change instead of trusting `receipt.status == 1`.
+Veyctum takes a transaction hash, auto-detects which chain it lives on, and returns a direct natural-language answer plus inspectable evidence. For Base USDC it normalizes the actual token-transfer effect, so a consumer can separate execution success from payment fulfillment and act on the observed state change instead of trusting `receipt.status == 1`.
 
 **Live Miner:** https://veyctum.splitpot.xyz
-**Telegraph Miner ID:** `9005`
+**Telegraph Miner ID:** `213` (replacement registration; legacy ID `9005` remains active during node rehydration)
 **Intent:** `ONCHAIN_TX_LOOKUP`
 **Chains:** Ethereum (`1`) and Base (`8453`), auto-detected from the transaction hash
-**Telegraph registration:** Base Sepolia, registration ID `104`
+**Telegraph registration:** Base Sepolia, registration ID `213`
+
+## The competitive edge
+
+Most transaction tools answer **what the chain accepted**. Veyctum answers **whether the action's expected economic effect is proven**.
+
+That distinction matters for agents, escrow, marketplaces, and any automated workflow that receives a transaction hash and must decide whether to release value. A receipt-only integration can release after a successful approval, wrong-recipient transfer, wrong amount, or unrelated contract call. Veyctum provides the missing verification boundary:
+
+- **Observed facts, not caller assertions:** two RPC providers agree on the transaction, receipt, logs, chain, and finality before a result is definitive.
+- **Semantic effects, not just execution status:** allowlisted token logs are normalized into sender, recipient, token, and exact raw amount.
+- **Decision-ready output:** the reference consumer compares those facts with a frozen expectation and transitions `LOCKED -> RELEASED` only on an exact match.
+- **Failure is useful intelligence:** successful-but-wrong transactions become explicit `REJECTED` outcomes instead of false positives.
+
+The result is a reusable effect oracle: the Miner reports what happened, while each consumer keeps ownership of its own business rule and protected action.
 
 ## Why Veyctum exists
 
@@ -92,6 +105,10 @@ effects[]            normalized Base ERC-20 transfer effects
 evidence
 ```
 
+Full mode also includes the same natural-language response as `answer`. Telegraph
+requests used by a consumer must pass `format=full` so the published signal
+retains the normalized `effects` array needed for independent verification.
+
 Key states:
 
 - `OK` — supported finalized Base ERC-20 transfer effects were found.
@@ -106,6 +123,7 @@ The chain registry also carries Arbitrum, Optimism, and Polygon; they can be ena
 ### Health
 
 ```text
+GET /          judge quickstart and endpoint map
 GET /health    process liveness
 GET /ready      live per-chain reachability probe (chain id + head per chain)
 ```
@@ -120,7 +138,7 @@ chain|tx_hash|status|block_number|from|to|value_wei
 
 For the shared Base fixture, Veyctum's success-path canonical value is asserted by both unit and live integration tests to match the incumbent format exactly.
 
-Recorded test state: **81 hermetic + 6 live integration tests passing**.
+Recorded test state: **85 hermetic + 6 live integration tests passing**.
 
 ## Real proof, not a mock
 
@@ -128,7 +146,7 @@ The Telegraph Hackathon rules ask for evidence that the quality flywheel works i
 
 | Proof | Result |
 |---|---|
-| Miner registration | Miner `9005`, registration ID `104`, active on Base Sepolia |
+| Miner registration | Replacement Miner registration `213`, active on Base Sepolia; legacy registration `104` remains recorded on-chain |
 | Stable endpoint | `https://veyctum.splitpot.xyz` |
 | Multi-chain answer | Ethereum transaction method and contract decoded and answered; covered by live integration tests |
 | Canonical compatibility | Success-path canonical output matches the shared Base fixture exactly |
@@ -178,6 +196,16 @@ Verification accepts a transaction hash and a real Telegraph signal hash. The se
 4. compares those facts with the frozen expectation,
 5. performs one atomic state transition.
 
+The Telegraph request that creates the signal must use the full response mode:
+
+```json
+{"method":"GET","endpoint":"/lookup","payload":{"chain":"base","format":"full","tx_hash":"0x..."}}
+```
+
+The reference consumer routes are protected with `x-consumer-api-key` when
+`CONSUMER_AUTH_REQUIRED=true`. Set `CONSUMER_API_KEY` to a long random value in
+the deployment environment. The public Miner lookup endpoint remains unauthenticated.
+
 ```text
 LOCKED -> RELEASED   only on an exact verified match
 LOCKED -> REJECTED   on a definitive semantic mismatch
@@ -185,6 +213,18 @@ LOCKED -> LOCKED     when evidence is not yet definitive
 ```
 
 A caller cannot supply a fabricated lookup result to force a release, and a rejected or released action cannot be flipped by replaying verification.
+
+### Judge replay
+
+The complete positive and negative proof can be replayed against a local or deployed instance with the checked-in script below. It uses the real finalized fixtures and Telegraph signal hashes recorded in `evidence/`, so the result is not a mock:
+
+```bash
+CONSUMER_API_KEY='your-configured-key' \\
+BASE_URL='https://veyctum.splitpot.xyz' \\
+./scripts/replay_consumer_proof.sh
+```
+
+The script creates one frozen action, verifies the real transfer signal, and prints `RELEASED`. It then creates a second action for the approval-only transaction and prints `REJECTED` with `NO_EFFECT`. Consumer routes intentionally require the API key; use the local setup below when a public deployment key is not available.
 
 ## Reliability and safety
 
@@ -196,6 +236,8 @@ A caller cannot supply a fabricated lookup result to force a release, and a reje
 - Unknown request fields are rejected.
 - Public lookup traffic is rate-limited.
 - Authorization and payment headers are redacted from logs.
+- Reference consumer routes require `x-consumer-api-key` when
+  `CONSUMER_AUTH_REQUIRED=true`; they are separate from the public Miner API.
 - Consumer state transitions and audit attempts are persisted atomically in SQLite.
 - Release requires a Telegraph signal and an independent effect cross-check.
 - Secrets are loaded from environment variables and `.env` is ignored.
@@ -209,6 +251,7 @@ git clone https://github.com/mystiquemide/veyctum.git
 cd veyctum
 npm ci
 cp .env.example .env
+# Set CONSUMER_API_KEY in .env before using /consumer/* routes.
 npm run build
 npm start
 ```
@@ -232,11 +275,17 @@ The hermetic suite does not require network access. Integration tests exercise l
 
 ## Telegraph registration artifact
 
-[`veyctum.yaml`](./veyctum.yaml) is the public Miner manifest used for registration. Its hosted bytes were hashed before the on-chain registration and are kept byte-identical to that commitment.
+[`veyctum.yaml`](./veyctum.yaml) is the current Miner manifest. It declares multi-chain auto-detection, answer-first scoring output, and explicit full mode for effect verification. Registration `213` committed the current hosted bytes. Telegraph discovery may temporarily continue to show legacy registration `9005` while its node-side registry rehydrates.
 
 Hosted manifest: https://veyctum.splitpot.xyz/veyctum.yaml
 
-Registration transaction:
+Current registration transaction:
+
+[Base Sepolia transaction `0xfb1a5f...afdbd`](https://sepolia.basescan.org/tx/0xfb1a5f22259d6096f664a03048b53b1c5a8e27a2a1e7e28cdf1a3a02680afdbd)
+
+Current manifest SHA-256: `3191ebf32c287925d197d56214450106aa610738223d45cc210f206da64484c8`
+
+Legacy registration transaction:
 
 [Base Sepolia transaction `0xd94ac235...7a95`](https://sepolia.basescan.org/tx/0xd94ac2357a6c7c1ba439837fb1c57a0b5a959a9f01405602e2d30e87b65c7a95)
 

@@ -94,7 +94,7 @@ function goodSignal(): TelegraphSignal {
 }
 
 async function makeApp(opts: { lookup?: LookupResult; signals?: Map<string, TelegraphSignal> } = {}) {
-  const config = loadConfig({ RATE_LIMIT_PER_SEC: '1000', CONSUMER_DB_PATH: ':memory:' });
+  const config = loadConfig({ RATE_LIMIT_PER_SEC: '1000', CONSUMER_DB_PATH: ':memory:', CONSUMER_AUTH_REQUIRED: 'false' });
   const service = new FakeLookupService(opts.lookup ?? okLookup());
   const store = new ConsumerStore(':memory:');
   const signals = opts.signals ?? new Map([[SIGNAL, goodSignal()]]);

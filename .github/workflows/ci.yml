@@ -22,8 +22,12 @@ jobs:
         run: npm ci
       - name: Typecheck
         run: npx tsc -p tsconfig.json --noEmit
+      - name: Production build
+        run: npm run build
       - name: Unit tests (hermetic)
         run: npx vitest run
+      - name: Dependency audit
+        run: npm audit --audit-level=high
 
   integration:
     runs-on: ubuntu-latest

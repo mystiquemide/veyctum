@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { AppConfig } from './config.js';
 import { LookupService } from './service.js';
@@ -34,6 +35,7 @@ export async function buildApp(
           'req.headers.payment-signature',
           'req.headers["PAYMENT-SIGNATURE"]',
           'req.headers["Payment-Required"]',
+          'req.headers["x-consumer-api-key"]',
           '*.rpc_url',
           '*.private_key',
         ],
@@ -68,7 +70,36 @@ export async function buildApp(
     }
     reply.header('X-RateLimit-Limit', String(config.RATE_LIMIT_PER_SEC));
     reply.header('X-RateLimit-Remaining', String(verdict.remaining));
+
+    if (req.url.startsWith('/consumer/') && config.CONSUMER_AUTH_REQUIRED) {
+      if (!config.CONSUMER_API_KEY) {
+        return reply.code(503).send({ error: 'CONSUMER_AUTH_NOT_CONFIGURED', detail: 'consumer API is unavailable until CONSUMER_API_KEY is configured' });
+      }
+      const supplied = req.headers['x-consumer-api-key'];
+      const expected = Buffer.from(config.CONSUMER_API_KEY);
+      const actual = typeof supplied === 'string' ? Buffer.from(supplied) : null;
+      const valid = actual !== null && actual.length === expected.length && timingSafeEqual(actual, expected);
+      if (!valid) {
+        return reply.code(401).header('WWW-Authenticate', 'ApiKey realm="consumer"').send({
+          error: 'CONSUMER_UNAUTHORIZED',
+          detail: 'x-consumer-api-key is required for consumer routes',
+        });
+      }
+    }
   });
+
+  app.get('/', async () => ({
+    service: config.MINER_NAME,
+    description: 'Multi-chain EVM transaction lookup with Base USDC effect normalization.',
+    endpoints: {
+      health: '/health',
+      ready: '/ready',
+      answer: '/lookup?tx_hash=0x...',
+      full: '/lookup?tx_hash=0x...&format=full',
+      manifest: '/veyctum.yaml',
+    },
+    consumer: 'Consumer routes require x-consumer-api-key when CONSUMER_AUTH_REQUIRED=true.',
+  }));
 
   app.get('/health', async () => ({ status: 'ok', service: config.MINER_NAME, time: new Date().toISOString() }));
 
@@ -127,9 +158,12 @@ export async function buildApp(
     }
     const result = await service.lookup(parsed.data);
     // Default: answer-first body (natural-language `answer` scores ~0.99 vs the
-    // salience scorer; nested JSON scores ~0.01). `?format=full` returns the
-    // structured LookupResult for the consumer gate and tooling.
-    return reply.code(200).send(parsed.data.format === 'full' ? result : answerFirst(result));
+    // salience scorer; nested JSON scores ~0.01). Explicit full mode carries the
+    // same answer plus structured facts so a Telegraph signal can back the
+    // consumer proof gate without sacrificing the scored default.
+    return reply.code(200).send(
+      parsed.data.format === 'full' ? { ...result, answer: result.summary } : answerFirst(result),
+    );
   });
 
   if (consumerStore) {

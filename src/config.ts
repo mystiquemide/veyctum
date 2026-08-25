@@ -35,6 +35,14 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().min(100).max(60000).default(1000),
   // Consumer proof gate durable store (FR-015..FR-019); ':memory:' for tests
   CONSUMER_DB_PATH: z.string().default('./data/veyctum.db'),
+  // Consumer routes are reference-application endpoints, not public Miner API.
+  // Production should set a long random key and keep auth required. Tests and
+  // local hermetic callers can explicitly disable the gate.
+  CONSUMER_AUTH_REQUIRED: z
+    .string()
+    .default('true')
+    .transform((v) => v.toLowerCase() !== 'false'),
+  CONSUMER_API_KEY: z.string().default(''),
   // Telegraph Engine signal API used to verify release signals (BR-007, REV-009)
   TELEGRAPH_SIGNAL_API_URL: z
     .string()

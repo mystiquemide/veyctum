@@ -5,6 +5,7 @@ import { buildApp } from '../src/server.js';
 import { LookupService } from '../src/service.js';
 import { ConsumerStore } from '../src/consumerStore.js';
 import type { ReadinessReport } from '../src/rpc.js';
+import type { LookupResult } from '../src/domain.js';
 
 const HASH = '0x373982c25ba2c56c52c30a6db4ea14f9af267d6152f09f14f0b9b43e842e16a7';
 
@@ -30,8 +31,32 @@ class DownService extends LookupService {
   }
 }
 
+class CannedService extends HealthyService {
+  override async lookup(): Promise<LookupResult> {
+    return {
+      schema_version: '1.0.0',
+      chain: 'base',
+      chain_id: 8453,
+      tx_hash: HASH,
+      state: 'OK',
+      status: 'success',
+      summary: 'Base transaction confirmed and succeeded.',
+      method: { selector: '0xa9059cbb', name: 'transfer', signature: 'transfer(address,uint256)', source: 'local', kind: 'contract_call' },
+      from: '0x4506de02071dcd46a22638aab6cd19e57e252e22',
+      to: '0x2192bc3b4028acc1113f2cd9ac2cba70c36520db',
+      native_symbol: 'ETH',
+      native_value: '0',
+      sender_is_recipient: false,
+      canonical: 'base|0xabc|confirmed_success|1|0xfrom|0xto|0',
+      finality: { required_confirmations: 2, confirmations: 10, reached: true },
+      effects: [],
+      evidence: { block_number: '1', block_hash: '0xbh', tx_from: '0xfrom', tx_to: '0xto', value_wei: '0', receipt_status: 'success', provider: 'primary' },
+    };
+  }
+}
+
 async function makeApp(service?: LookupService, env: Record<string, string> = {}) {
-  const config = loadConfig({ RATE_LIMIT_PER_SEC: '1000', CONSUMER_DB_PATH: ':memory:', ...env });
+  const config = loadConfig({ RATE_LIMIT_PER_SEC: '1000', CONSUMER_DB_PATH: ':memory:', CONSUMER_AUTH_REQUIRED: 'false', ...env });
   const store = new ConsumerStore(':memory:');
   const app = await buildApp(config, service ?? new LookupService(config), store);
   return { app, config };
@@ -49,6 +74,21 @@ describe('server surface (FR-025, FR-002)', () => {
     const body = res.json();
     expect(body.status).toBe('ok');
     expect(body.service).toBe('veyctum');
+  });
+
+  it('GET / returns a judge quickstart instead of a framework 404', async () => {
+    const res = await app.inject({ method: 'GET', url: '/' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().endpoints.full).toContain('format=full');
+  });
+
+  it('full lookup mode preserves answer and structured facts', async () => {
+    const { app: fullApp } = await makeApp(new CannedService());
+    const res = await fullApp.inject({ method: 'GET', url: `/lookup?tx_hash=${HASH}&format=full` });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.answer).toBe(body.summary);
+    expect(body.state).toBe('OK');
   });
 
   it('GET /ready returns ready with per-chain reachability when the probe passes (FR-025/REV-003)', async () => {
@@ -119,6 +159,21 @@ describe('server surface (FR-025, FR-002)', () => {
     });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toBe('INVALID_INPUT');
+  });
+
+  it('protects consumer routes when consumer auth is enabled', async () => {
+    const { app: protectedApp } = await makeApp(new HealthyService(), {
+      CONSUMER_AUTH_REQUIRED: 'true',
+      CONSUMER_API_KEY: 'test-consumer-key-1234567890',
+    });
+    const denied = await protectedApp.inject({ method: 'GET', url: '/consumer/actions' });
+    expect(denied.statusCode).toBe(401);
+    const allowed = await protectedApp.inject({
+      method: 'GET',
+      url: '/consumer/actions',
+      headers: { 'x-consumer-api-key': 'test-consumer-key-1234567890' },
+    });
+    expect(allowed.statusCode).toBe(200);
   });
 });
 

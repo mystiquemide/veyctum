@@ -167,8 +167,9 @@ export class LookupService {
  * live GTs: the bare natural-language `answer` scores ~0.99, while ANY extra
  * structured/hex fields (even a 6-field envelope) collapse some question types
  * to ~0.01. So the scored body carries ONLY the natural-language answer; the
- * full structured LookupResult is available via `?format=full` for the
- * in-process consumer gate and tooling.
+ * Full structured facts are available via `?format=full` for consumer clients
+ * and tooling. The explicit mode keeps scored default responses concise while
+ * preserving effects in signals requested for downstream verification.
  */
 export function answerFirst(r: LookupResult): { answer: string } {
   return { answer: r.summary };

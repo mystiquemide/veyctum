@@ -16,6 +16,12 @@ export interface SignalPayloadResponse {
 
 export interface TelegraphSignal {
   signal_hash?: unknown;
+  signal?: {
+    signal_hash?: unknown;
+    miner_slug?: unknown;
+    subnet_id?: unknown;
+    [key: string]: unknown;
+  };
   payload?: {
     response?: SignalPayloadResponse;
     [key: string]: unknown;
@@ -60,6 +66,12 @@ export function extractSignalTxHash(signal: TelegraphSignal): string | null {
   return typeof raw === 'string' ? raw.toLowerCase() : null;
 }
 
+/** The fetched record must identify the same signal requested by the caller. */
+export function signalMatchesHash(signal: TelegraphSignal, signalHash: string): boolean {
+  const raw = signal.signal_hash;
+  return typeof raw === 'string' && raw.toLowerCase() === signalHash.toLowerCase();
+}
+
 /** The recorded effects inside a signal's payload.response (Veyctum answers). */
 export function extractSignalEffects(signal: TelegraphSignal): TransferEffect[] | null {
   const raw = signal?.payload?.response?.effects;
@@ -91,7 +103,7 @@ export function extractSignalEffects(signal: TelegraphSignal): TransferEffect[] 
 
 /** Canonical comparison key for one effect (case-insensitive, exact amount). */
 const effectKey = (e: TransferEffect): string =>
-  `${e.token.toLowerCase()}|${e.sender.toLowerCase()}|${e.recipient.toLowerCase()}|${e.raw_amount}`;
+  `${e.token.toLowerCase()}|${e.sender.toLowerCase()}|${e.recipient.toLowerCase()}|${e.raw_amount}|${e.log_index}|${e.block_hash?.toLowerCase() ?? ''}|${e.tx_hash.toLowerCase()}`;
 
 /** Exact, order-sensitive equality of two effect arrays (same finalized tx). */
 export function effectsEqual(a: TransferEffect[], b: TransferEffect[]): boolean {

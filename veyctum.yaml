@@ -3,13 +3,12 @@ kind: miner
 id: 9005
 slug: veyctum
 protocol: generic
-name: Veyctum Transaction Effect Lookup
+name: Veyctum Transaction Effect Oracle
 description: >
-  Deterministic Base ERC-20 transaction effect lookup. Returns the observed
-  normalized transfer effects (token, semantic sender, recipient, raw amount)
-  with block/tx/log evidence, so consumers can distinguish EVM execution
-  success from fulfillment of the expected payment. Branch 2 boundary: the
-  Miner returns observed facts; the consumer owns expectation comparison.
+  Deterministic multi-chain EVM effect oracle. Returns an answer-first response
+  by default and an explicit full response with observed Base USDC transfer
+  effects, block/tx/log evidence, and finality facts so consumers can distinguish
+  EVM execution success from fulfillment of an expected payment.
 
 base_url: https://veyctum.splitpot.xyz
 
@@ -36,27 +35,37 @@ endpoints:
   - path: /lookup
     external_path: /lookup
     method: GET
-    description: Look up the observed ERC-20 transfer effects of a Base transaction.
+    description: Verify what an EVM transaction actually did, with optional structured Base USDC effects.
     param_map:
       chain: chain
       tx_hash: tx_hash
+      format: format
 
 input_schema:
   type: object
   properties:
     chain:
         type: string
-        enum:
-              - base
     tx_hash:
         type: string
         pattern: ^0x[0-9a-fA-F]{64}$
+    format:
+        type: string
+        enum:
+              - answer
+              - full
   required:
     - tx_hash
 
 output_schema:
   type: object
   properties:
+    answer:
+        type: string
+    summary:
+        type: string
+    chain:
+        type: string
     schema_version:
         type: string
     chain_id:
@@ -84,19 +93,15 @@ output_schema:
               - string
               - "null"
   required:
-    - schema_version
-    - chain_id
-    - tx_hash
-    - state
-    - status
+    - answer
 
 semantics:
   signal_mapping:
-    label_field: state
-    reason_field: error_detail
+    label_field: answer
+    reason_field: answer
   supported_intents:
     - ONCHAIN_TX_LOOKUP
 
 # YAML is public. No API keys or private credentials belong in this file.
 # Hosted copy: https://veyctum.splitpot.xyz/veyctum.yaml
-# SHA-256 is computed from the exact hosted bytes before registration.
+# SHA-256 must be computed from the exact hosted bytes before registration.

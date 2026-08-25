@@ -8,7 +8,7 @@ The shortest review path is below.
 
 [`registration/`](./registration/)
 
-Confirms that Veyctum is registered on Base Sepolia as Telegraph Miner `9005`, registration ID `104`, with the public Miner manifest hosted at `https://veyctum.splitpot.xyz/veyctum.yaml` and its exact bytes committed by hash.
+Confirms the Base Sepolia registration history. Legacy registration `104` / Miner `9005` committed the original manifest. Replacement registration `213` committed the current multi-chain/answer-first manifest in transaction `0xfb1a5f22259d6096f664a03048b53b1c5a8e27a2a1e7e28cdf1a3a02680afdbd`.
 
 ## 2. Telegraph compatibility and paid request groundwork
 

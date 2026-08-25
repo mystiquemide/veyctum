@@ -4,6 +4,7 @@ import {
   effectsEqual,
   extractSignalEffects,
   extractSignalTxHash,
+  signalMatchesHash,
   signalMatchesTx,
   type TelegraphSignal,
 } from '../src/telegraph.js';
@@ -58,6 +59,12 @@ describe('telegraph signal verification helpers (REV-009)', () => {
     expect(signalMatchesTx(signal(), TX)).toBe(true);
     expect(signalMatchesTx(signal(), TX.toUpperCase())).toBe(true);
     expect(signalMatchesTx(signal(), '0x' + 'ff'.repeat(32))).toBe(false);
+  });
+
+  it('requires the fetched signal identity to match the requested hash', () => {
+    expect(signalMatchesHash(signal(), '0x' + 'bb'.repeat(32))).toBe(true);
+    expect(signalMatchesHash(signal(), '0x' + 'cc'.repeat(32))).toBe(false);
+    expect(signalMatchesHash({ payload: {} }, '0x' + 'bb'.repeat(32))).toBe(false);
   });
 
   it('effectsEqual is exact and order-sensitive', () => {
