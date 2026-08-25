@@ -2,62 +2,113 @@
 
 [![CI](https://github.com/mystiquemide/veyctum/actions/workflows/ci.yml/badge.svg)](https://github.com/mystiquemide/veyctum/actions/workflows/ci.yml)
 
-**A Telegraph `ONCHAIN_TX_LOOKUP` Miner that verifies what a Base ERC-20 transaction actually did, not merely whether it executed successfully.**
+**A Telegraph `ONCHAIN_TX_LOOKUP` Miner that answers what an EVM transaction actually did, in plain language, with inspectable evidence.**
 
 > **Transaction succeeded. Payment did not.**
 >
-> A successful EVM receipt is not proof that the expected payment happened.
+> A successful EVM receipt is not proof that the effect a caller expected happened.
 
-Veyctum turns a Base transaction hash into deterministic, normalized transfer effects with inspectable evidence. Downstream autonomous systems can then act on the observed state change instead of trusting `receipt.status == 1` as a proxy for fulfillment.
+Veyctum takes a transaction hash, auto-detects which chain it lives on, and returns a direct natural-language answer: which method was called, on which contract, from whom, how much native value moved, and whether it succeeded. For Base USDC it also normalizes the actual token-transfer effect, so a consumer can separate execution success from payment success and act on the observed state change instead of trusting `receipt.status == 1`.
 
-**Live Miner:** [veyctum.splitpot.xyz](https://veyctum.splitpot.xyz)  
-**Telegraph Miner ID:** `9005`  
-**Intent:** `ONCHAIN_TX_LOOKUP`  
-**Network observed:** Base mainnet (`8453`)  
+**Live Miner:** https://veyctum.splitpot.xyz
+**Telegraph Miner ID:** `9005`
+**Intent:** `ONCHAIN_TX_LOOKUP`
+**Chains:** Ethereum (`1`) and Base (`8453`), auto-detected from the transaction hash
 **Telegraph registration:** Base Sepolia, registration ID `104`
 
 ## Why Veyctum exists
 
-Autonomous systems frequently receive a transaction hash as proof that something happened on-chain. The obvious check is the transaction receipt. But `status == 1` only proves the EVM execution did not revert.
+Autonomous systems frequently receive a transaction hash as proof that something happened on-chain. The obvious check is the receipt, but `status == 1` only proves the EVM execution did not revert.
 
-It does **not** prove that:
+It does not tell you what the transaction actually did: which method it called, which contract it touched, who sent it, how much moved, or whether the specific token transfer a consumer expected occurred. A successful approval, a wrong-recipient transfer, a wrong-amount transfer, or an unrelated call can all look successful at the receipt level while failing the outcome a system expected.
 
-- the expected token moved,
-- the expected sender paid,
-- the expected recipient received funds,
-- the expected amount was transferred,
-- or any payment transfer happened at all.
-
-A successful approval transaction, wrong-recipient transfer, wrong-amount transfer, or unrelated token movement can all look "successful" at the receipt level while failing the action an autonomous system expected.
-
-Veyctum closes that gap by reporting the actual supported transfer effects of the referenced transaction.
+Veyctum closes that gap. It reports the observed facts of the transaction, and for Base USDC it normalizes the real transfer effect so a consumer can tell execution success apart from payment success.
 
 ## The mechanism
 
 ```mermaid
 flowchart TD
-    A["Application submits Base transaction hash"] --> B["Telegraph Engine / x402"]
+    A["Application submits a transaction hash"] --> B["Telegraph Engine / x402"]
     B --> C["Veyctum Miner 9005"]
 
-    C --> D1["Base RPC provider A"]
-    C --> D2["Base RPC provider B"]
-    D1 --> E{"Critical transaction facts agree?"}
-    D2 --> E
+    C --> D["Auto-detect chain from the hash<br/>(Ethereum, Base)"]
+    D --> E1["Chain RPC provider A"]
+    D --> E2["Chain RPC provider B"]
+    E1 --> F{"Critical facts agree?"}
+    E2 --> F
 
-    E -- "No" --> X["Fail closed<br/>RPC_DISAGREEMENT"]
-    E -- "Yes" --> F["Finality check + canonical scoring field<br/>+ ERC-20 Transfer normalization"]
+    F -- "No" --> X["Fail closed<br/>RPC_DISAGREEMENT / UPSTREAM_ERROR"]
+    F -- "Yes" --> G["Finality check + method decode<br/>+ Base ERC-20 Transfer normalization"]
 
-    F --> G["Observed effects + inspectable evidence"]
-    G --> H["Telegraph signal"]
-    H --> I["Consumer independently verifies<br/>signal + on-chain effects"]
+    G --> H["Plain-language answer + canonical field<br/>structured facts via ?format=full"]
+    H --> I["Telegraph signal"]
+    I --> J["Consumer verifies signal + observed effects"]
 
-    I --> J{"Expected effect satisfied?"}
-    J -- "Exact match" --> K["RELEASED once"]
-    J -- "Definitive mismatch" --> L["REJECTED"]
-    J -- "Pending / disagreement" --> M["Remains LOCKED"]
+    J --> K{"Expected effect satisfied?"}
+    K -- "Exact match" --> L["RELEASED once"]
+    K -- "Definitive mismatch" --> M["REJECTED"]
+    K -- "Pending / disagreement" --> N["Remains LOCKED"]
 ```
 
-The Miner deliberately reports **observed facts**. The consumer owns the expected effect and the protected action. This keeps the intelligence reusable instead of baking one application's business rule into the Miner.
+The Miner reports observed facts. The consumer owns the expected effect and the protected action, which keeps the intelligence reusable instead of baking one application's business rule into the Miner.
+
+## Response shape
+
+By default `/lookup` returns an answer-first, natural-language body:
+
+```bash
+curl 'https://veyctum.splitpot.xyz/lookup?tx_hash=0xb376975e90801e36a34432c960825a0c12a56d589a77a95aa552a7a3618678ee'
+```
+
+```json
+{"answer":"Ethereum transaction 0xb376... was confirmed and succeeded. It called the bridgeERC20To method (selector 0x540abf73) on contract 0x99c9..., sent from 0x2ce9... with 0 ETH in native value. This was a contract call. It was included in block 25700000. The sender 0x2ce9... and recipient 0x99c9... are different addresses."}
+```
+
+`chain` is an optional hint; the chain is auto-detected from the hash regardless. For the full structured result, add `?format=full`:
+
+```bash
+curl 'https://veyctum.splitpot.xyz/lookup?tx_hash=0x...&format=full'
+```
+
+The structured body contains:
+
+```text
+schema_version
+chain                detected chain name
+chain_id
+tx_hash
+state
+status
+summary              the natural-language answer
+method               { selector, name, signature, kind }
+from
+to
+native_symbol
+native_value
+sender_is_recipient
+canonical            chain|tx_hash|status|block_number|from|to|value_wei
+finality
+effects[]            normalized Base ERC-20 transfer effects
+evidence
+```
+
+Key states:
+
+- `OK` — supported finalized Base ERC-20 transfer effects were found.
+- `NO_SUPPORTED_TRANSFER` — execution succeeded with no supported transfer effect. The `answer` and structured facts still describe the transaction.
+- `PENDING` — the transaction is not yet definitive.
+- `REVERTED` — EVM execution reverted.
+- `RPC_DISAGREEMENT` / `UPSTREAM_ERROR` — providers disagree or a provider failed, so Veyctum fails closed rather than guessing.
+- `NOT_FOUND`, `AMBIGUOUS`, `UNSUPPORTED`, `INVALID_INPUT` — explicit non-success states rather than fabricated certainty.
+
+The chain registry also carries Arbitrum, Optimism, and Polygon; they can be enabled by configuration once needed. Ethereum and Base are enabled by default.
+
+### Health
+
+```text
+GET /health    process liveness
+GET /ready      live per-chain reachability probe (chain id + head per chain)
+```
 
 ### Canonical scoring compatibility
 
@@ -67,19 +118,20 @@ The Miner deliberately reports **observed facts**. The consumer owns the expecte
 chain|tx_hash|status|block_number|from|to|value_wei
 ```
 
-For the shared live fixture, Veyctum's success-path canonical value is asserted by both unit and live integration tests to match the incumbent Verity format exactly. The richer normalized ERC-20 `effects[]` remain in the same response as the differentiator for downstream consumers.
+For the shared Base fixture, Veyctum's success-path canonical value is asserted by both unit and live integration tests to match the incumbent format exactly.
 
-Current recorded test state: **67 hermetic + 5 live integration tests passing**.
+Recorded test state: **81 hermetic + 6 live integration tests passing**.
 
 ## Real proof, not a mock
 
-The Telegraph Hackathon rules say the goal is evidence that the quality flywheel works in real conditions, not simply a polished demo. Veyctum's core claims are backed by real paid Telegraph requests, real signals, real Base transactions, and real x402 settlement.
+The Telegraph Hackathon rules ask for evidence that the quality flywheel works in real conditions, not a polished demo. Veyctum's core claims are backed by real paid Telegraph requests, real signals, real transactions, and real x402 settlement.
 
 | Proof | Result |
 |---|---|
 | Miner registration | Miner `9005`, registration ID `104`, active on Base Sepolia |
 | Stable endpoint | `https://veyctum.splitpot.xyz` |
-| Canonical compatibility | Success-path canonical output matches the shared incumbent fixture exactly |
+| Multi-chain answer | Ethereum transaction method and contract decoded and answered; covered by live integration tests |
+| Canonical compatibility | Success-path canonical output matches the shared Base fixture exactly |
 | Positive paid request | Real Base USDC transfer served by Veyctum in `1663 ms` |
 | Positive signal | `0x8b782fecb8b5f92e5e5c4307ede66b2a3b462bfbac6014ca9e289281ffb4ef50` |
 | Positive consumer outcome | Protected action changed from `LOCKED` to `RELEASED` exactly once |
@@ -95,68 +147,26 @@ The negative fixture is a real successful USDC approval transaction with no tran
 
 `0x5c8ea6c032bbba661648924da38a8ecf67bafcf92a8cc81ad58af000f7620994`
 
-The complete reproducible artifacts are indexed in [`evidence/`](./evidence/).
+The reproducible artifacts are indexed in [`evidence/`](./evidence/).
 
 ## Why this fits Telegraph
 
-Telegraph's Miner track rewards verified intelligence that can be ranked and consumed by downstream applications. Veyctum is designed around that exact loop:
+Telegraph's Miner track rewards verified intelligence that can be ranked and consumed by downstream applications. Veyctum is built around that loop:
 
-1. **Request** — an application asks for intelligence about a Base transaction.
-2. **Infer** — Veyctum resolves and normalizes the transaction's actual transfer effects.
-3. **Validate** — Telegraph can evaluate the deterministic canonical output against ground truth.
+1. **Request** — an application asks about a transaction.
+2. **Infer** — Veyctum detects the chain, agrees the facts across two providers, decodes the method, and normalizes any Base transfer effect.
+3. **Validate** — Telegraph evaluates the answer against ground truth.
 4. **Publish** — the result is preserved as a Telegraph signal.
 5. **Act** — a consumer independently verifies the signal before releasing or rejecting a protected action.
 6. **Settle** — paid requests use Telegraph's x402 settlement path.
 
-For Hackathon 1, the official Miner score is **75% Normalized Performance within the Intent** and **25% Engagement & Updates on X**. Cash-prize eligibility also requires at least three active Miners in the Intent and at least 100 real requests from Track 3 applications. Veyctum is kept live for that demand window.
+For Hackathon 1, the Miner score is **75% Normalized Performance within the Intent** and **25% Engagement and Updates on X**. Cash-prize eligibility also requires at least three active Miners in the Intent and at least 100 real requests from Track 3 applications. Veyctum is kept live for that demand window.
 
-Official rules: [hackathon.telegraphprotocol.com/rules](https://hackathon.telegraphprotocol.com/rules)
-
-## API
-
-### `GET /lookup`
-
-```bash
-curl 'https://veyctum.splitpot.xyz/lookup?chain=base&tx_hash=0x373982c25ba2c56c52c30a6db4ea14f9af267d6152f09f14f0b9b43e842e16a7'
-```
-
-The response contains:
-
-```text
-schema_version
-chain_id
-tx_hash
-state
-status
-canonical
-finality
-effects[]
-evidence
-error_code
-error_detail
-```
-
-Key states:
-
-- `OK` — supported finalized transfer effects were found.
-- `NO_SUPPORTED_TRANSFER` — execution succeeded but no supported payment transfer was observed.
-- `PENDING` — transaction is not yet definitive.
-- `REVERTED` — EVM execution reverted.
-- `RPC_DISAGREEMENT` — independent providers disagree, so Veyctum fails closed.
-- `NOT_FOUND`, `AMBIGUOUS`, `UNSUPPORTED`, `INVALID_INPUT`, `UPSTREAM_ERROR` — explicit non-success states rather than fabricated certainty.
-
-### Health
-
-```text
-GET /health
-GET /ready
-```
-
-`/health` is process liveness. `/ready` performs a live dependency check before reporting readiness.
+Official rules: https://hackathon.telegraphprotocol.com/rules
 
 ## Consumer proof gate
 
-The repository includes a small reference consumer showing how autonomous actions can use Veyctum safely.
+The repository includes a small reference consumer showing how an autonomous action can use Veyctum safely for Base USDC payments.
 
 A protected action starts with a frozen expected effect:
 
@@ -182,10 +192,11 @@ A caller cannot supply a fabricated lookup result to force a release, and a reje
 
 ## Reliability and safety
 
-- Two independent RPC providers must agree on critical transaction facts.
-- Both providers are verified to serve Base chain ID `8453`.
+- For each chain, two independent RPC providers must agree on critical transaction facts, and both must report that chain's expected chain ID.
+- The chain a transaction lives on is detected from the hash, not trusted from the request.
 - Token identity is the allowlisted contract address, not ticker metadata.
 - Only finalized supported transfer effects are treated as definitive.
+- Method decoding uses a local signature set first, with an optional bounded 4byte.directory fallback, and always returns the raw selector.
 - Unknown request fields are rejected.
 - Public lookup traffic is rate-limited.
 - Authorization and payment headers are redacted from logs.
@@ -221,13 +232,13 @@ npm run test:integration
 npm run build
 ```
 
-The hermetic suite does not require network access. Integration tests exercise live Base RPC behavior separately.
+The hermetic suite does not require network access. Integration tests exercise live RPC behavior separately.
 
 ## Telegraph registration artifact
 
-[`veyctum.yaml`](./veyctum.yaml) is the public Miner manifest used for registration. Its hosted bytes were hashed before the on-chain registration and are intentionally kept byte-identical to that commitment.
+[`veyctum.yaml`](./veyctum.yaml) is the public Miner manifest used for registration. Its hosted bytes were hashed before the on-chain registration and are kept byte-identical to that commitment.
 
-Hosted manifest: [https://veyctum.splitpot.xyz/veyctum.yaml](https://veyctum.splitpot.xyz/veyctum.yaml)
+Hosted manifest: https://veyctum.splitpot.xyz/veyctum.yaml
 
 Registration transaction:
 
@@ -236,12 +247,13 @@ Registration transaction:
 ## Repository map
 
 ```text
-src/                 Miner API, RPC agreement, canonical output, effect normalization, consumer gate
+src/                 Miner API, chain auto-detection, two-provider RPC agreement,
+                     method decode, canonical output, effect normalization, consumer gate
 scripts/             Reproducible Telegraph/x402 probe utilities
 test/                Hermetic and live integration tests
 evidence/            Registration, paid-request, signal, settlement, and end-to-end proof
-veyctum.yaml          Telegraph Miner registration manifest
-.github/workflows/    CI
+veyctum.yaml         Telegraph Miner registration manifest
+.github/workflows/   CI
 ```
 
 ## Evidence
