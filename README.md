@@ -152,6 +152,7 @@ The Telegraph Hackathon rules ask for evidence that the quality flywheel works i
 | Canonical compatibility | Success-path canonical output matches the shared Base fixture exactly |
 | Positive paid request | Real Base USDC transfer served by Veyctum in `1663 ms` |
 | Positive signal | `0x8b782fecb8b5f92e5e5c4307ede66b2a3b462bfbac6014ca9e289281ffb4ef50` |
+| Current-registration paid signal | `0xe39910a3033965102effcac686b5f25e18e3a5121b5e6e5fe7c26d6b2cee4e69` (`$0.01`, HTTP 200, 1444 ms) |
 | Positive consumer outcome | Protected action changed from `LOCKED` to `RELEASED` exactly once |
 | Negative paid request | Successful approval-only Base transaction served in `1236 ms` |
 | Negative signal | `0x9ea3e072c53bf1904478b2388ae345991595e848924a580c670a92a9db5a87a0` |
