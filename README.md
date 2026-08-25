@@ -160,10 +160,6 @@ Telegraph's Miner track rewards verified intelligence that can be ranked and con
 5. **Act** — a consumer independently verifies the signal before releasing or rejecting a protected action.
 6. **Settle** — paid requests use Telegraph's x402 settlement path.
 
-For Hackathon 1, the Miner score is **75% Normalized Performance within the Intent** and **25% Engagement and Updates on X**. Cash-prize eligibility also requires at least three active Miners in the Intent and at least 100 real requests from Track 3 applications. Veyctum is kept live for that demand window.
-
-Official rules: https://hackathon.telegraphprotocol.com/rules
-
 ## Consumer proof gate
 
 The repository includes a small reference consumer showing how an autonomous action can use Veyctum safely for Base USDC payments.
