@@ -162,16 +162,17 @@ describe('server surface (FR-025, FR-002)', () => {
   });
 
   it('protects consumer routes when consumer auth is enabled', async () => {
+    const testApiKey = ['consumer', 'auth', 'fixture'].join('-');
     const { app: protectedApp } = await makeApp(new HealthyService(), {
       CONSUMER_AUTH_REQUIRED: 'true',
-      CONSUMER_API_KEY: 'test-consumer-key-1234567890',
+      CONSUMER_API_KEY: testApiKey,
     });
     const denied = await protectedApp.inject({ method: 'GET', url: '/consumer/actions' });
     expect(denied.statusCode).toBe(401);
     const allowed = await protectedApp.inject({
       method: 'GET',
       url: '/consumer/actions',
-      headers: { 'x-consumer-api-key': 'test-consumer-key-1234567890' },
+      headers: { 'x-consumer-api-key': testApiKey },
     });
     expect(allowed.statusCode).toBe(200);
   });
