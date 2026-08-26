@@ -14,7 +14,7 @@ Veyctum takes a transaction hash, auto-detects which chain it lives on, and retu
 **Telegraph Miner ID:** `9005`
 **Intent:** `ONCHAIN_TX_LOOKUP`
 **Chains:** Ethereum (`1`) and Base (`8453`), auto-detected from the transaction hash
-**Telegraph registration:** Base Sepolia, registration ID `213`
+**Telegraph registration:** Base Sepolia, active Explorer registration ID `104`
 
 ## The competitive edge
 
@@ -146,13 +146,13 @@ The Telegraph Hackathon rules ask for evidence that the quality flywheel works i
 
 | Proof | Result |
 |---|---|
-| Miner registration | Current on-chain registration `213` for Miner `9005`, active on Base Sepolia; legacy registration `104` remains recorded on-chain |
+| Miner registration | Miner `9005`, active Explorer registration `104` on Base Sepolia |
 | Stable endpoint | `https://veyctum.splitpot.xyz` |
 | Multi-chain answer | Ethereum transaction method and contract decoded and answered; covered by live integration tests |
 | Canonical compatibility | Success-path canonical output matches the shared Base fixture exactly |
 | Positive paid request | Real Base USDC transfer served by Veyctum in `1663 ms` |
 | Positive signal | `0x8b782fecb8b5f92e5e5c4307ede66b2a3b462bfbac6014ca9e289281ffb4ef50` |
-| Current-registration paid signal | `0xe39910a3033965102effcac686b5f25e18e3a5121b5e6e5fe7c26d6b2cee4e69` (`$0.01`, HTTP 200, 1444 ms) |
+| Paid signal through active Miner `9005` | `0xe39910a3033965102effcac686b5f25e18e3a5121b5e6e5fe7c26d6b2cee4e69` (`$0.01`, HTTP 200, 1444 ms) |
 | Positive consumer outcome | Protected action changed from `LOCKED` to `RELEASED` exactly once |
 | Negative paid request | Successful approval-only Base transaction served in `1236 ms` |
 | Negative signal | `0x9ea3e072c53bf1904478b2388ae345991595e848924a580c670a92a9db5a87a0` |
@@ -276,19 +276,21 @@ The hermetic suite does not require network access. Integration tests exercise l
 
 ## Telegraph registration artifact
 
-[`veyctum.yaml`](./veyctum.yaml) is the current Miner manifest. It declares multi-chain auto-detection, answer-first scoring output, and explicit full mode for effect verification. Registration `213` committed the current hosted bytes for Miner `9005`. Telegraph discovery may temporarily continue to show the older registration record while its node-side registry rehydrates.
+[`veyctum.yaml`](./veyctum.yaml) is the current repository and hosted manifest. It declares multi-chain auto-detection, answer-first scoring output, and explicit full mode for effect verification. The active Explorer integration is registration `104` for Miner `9005`; it still reports the older on-chain manifest hash. A later replacement registration (`213`) committed the new hash but was rejected because its YAML URL was stored as `veyctum` instead of the full HTTPS URL. Do not use registration `213` as the submission identity.
 
 Hosted manifest: https://veyctum.splitpot.xyz/veyctum.yaml
 
-Current registration transaction:
+Active Explorer registration transaction:
+
+[Base Sepolia transaction `0xd94ac235...7a95`](https://sepolia.basescan.org/tx/0xd94ac2357a6c7c1ba439837fb1c57a0b5a959a9f01405602e2d30e87b65c7a95)
+
+Active Explorer manifest SHA-256: `8b29b2a6754922f81f7250bd36b17d418923716deebaa19515d3f4de69b35a52`
+
+Rejected replacement registration transaction:
 
 [Base Sepolia transaction `0xfb1a5f...afdbd`](https://sepolia.basescan.org/tx/0xfb1a5f22259d6096f664a03048b53b1c5a8e27a2a1e7e28cdf1a3a02680afdbd)
 
-Current manifest SHA-256: `3191ebf32c287925d197d56214450106aa610738223d45cc210f206da64484c8`
-
-Legacy registration transaction:
-
-[Base Sepolia transaction `0xd94ac235...7a95`](https://sepolia.basescan.org/tx/0xd94ac2357a6c7c1ba439837fb1c57a0b5a959a9f01405602e2d30e87b65c7a95)
+Rejected replacement manifest SHA-256: `3191ebf32c287925d197d56214450106aa610738223d45cc210f206da64484c8`
 
 ## Repository map
 
