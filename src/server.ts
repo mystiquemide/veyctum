@@ -9,6 +9,7 @@ import { FixedWindowLimiter } from './rateLimit.js';
 import { ConsumerStore } from './consumerStore.js';
 import { registerConsumerRoutes } from './consumer.js';
 import { TelegraphSignalClient, type SignalFetcher } from './telegraph.js';
+import { registerTrack3Routes } from './track3.js';
 
 /**
  * Miner API surface (FR-025, FR-002):
@@ -183,6 +184,8 @@ export async function buildApp(
     const client = signalClient ?? new TelegraphSignalClient(config.TELEGRAPH_SIGNAL_API_URL, config.TELEGRAPH_SIGNAL_TIMEOUT_MS);
     registerConsumerRoutes(app, service, consumerStore, client);
   }
+
+  registerTrack3Routes(app, config);
 
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof LookupError) {

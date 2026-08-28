@@ -14,22 +14,9 @@ Veyctum takes a transaction hash, auto-detects which chain it lives on, and retu
 **Telegraph Miner ID:** `9005`
 **Intent:** `ONCHAIN_TX_LOOKUP`
 **Chains:** Ethereum (`1`) and Base (`8453`), auto-detected from the transaction hash
-**Telegraph registration:** Base Sepolia, active Explorer registration ID `104`
+**Telegraph registration:** Base Sepolia, active Explorer registration ID `262`
 
-## The competitive edge
-
-Most transaction tools answer **what the chain accepted**. Veyctum answers **whether the action's expected economic effect is proven**.
-
-That distinction matters for agents, escrow, marketplaces, and any automated workflow that receives a transaction hash and must decide whether to release value. A receipt-only integration can release after a successful approval, wrong-recipient transfer, wrong amount, or unrelated contract call. Veyctum provides the missing verification boundary:
-
-- **Observed facts, not caller assertions:** two RPC providers agree on the transaction, receipt, logs, chain, and finality before a result is definitive.
-- **Semantic effects, not just execution status:** allowlisted token logs are normalized into sender, recipient, token, and exact raw amount.
-- **Decision-ready output:** the reference consumer compares those facts with a frozen expectation and transitions `LOCKED -> RELEASED` only on an exact match.
-- **Failure is useful intelligence:** successful-but-wrong transactions become explicit `REJECTED` outcomes instead of false positives.
-
-The result is a reusable effect oracle: the Miner reports what happened, while each consumer keeps ownership of its own business rule and protected action.
-
-## Why Veyctum exists
+## Why I built this
 
 Autonomous systems frequently receive a transaction hash as proof that something happened on-chain. The obvious check is the receipt, but `status == 1` only proves the EVM execution did not revert.
 
@@ -64,6 +51,19 @@ flowchart TD
 ```
 
 The Miner reports observed facts. The consumer owns the expected effect and the protected action, which keeps the intelligence reusable instead of baking one application's business rule into the Miner.
+
+## How it works
+
+A tx hash enters. Veyctum detects the chain, confirms critical facts across two RPC providers, decodes the method, and normalizes any Base USDC transfer effect. The result is a plain-language answer plus structured evidence.
+
+For consumers, the real value is the negative path: an approval-only tx stays `REJECTED` instead of falsely `RELEASED`.
+
+| Operation | Result |
+|---|---|
+| Supported Base USDC transfer with exact expected effect | `RELEASED` once |
+| Approval-only or wrong-effect tx | `REJECTED` with `NO_EFFECT` |
+| Pending or provider disagreement | Remains `LOCKED` |
+| Unsupported or invalid input | Explicit non-success state |
 
 ## Response shape
 
@@ -105,18 +105,16 @@ effects[]            normalized Base ERC-20 transfer effects
 evidence
 ```
 
-Full mode also includes the same natural-language response as `answer`. Telegraph
-requests used by a consumer must pass `format=full` so the published signal
-retains the normalized `effects` array needed for independent verification.
+Full mode also includes the same natural-language response as `answer`. Telegraph requests used by a consumer must pass `format=full` so the published signal retains the normalized `effects` array needed for independent verification.
 
 Key states:
 
-- `OK` — supported finalized Base ERC-20 transfer effects were found.
-- `NO_SUPPORTED_TRANSFER` — execution succeeded with no supported transfer effect. The `answer` and structured facts still describe the transaction.
-- `PENDING` — the transaction is not yet definitive.
-- `REVERTED` — EVM execution reverted.
-- `RPC_DISAGREEMENT` / `UPSTREAM_ERROR` — providers disagree or a provider failed, so Veyctum fails closed rather than guessing.
-- `NOT_FOUND`, `AMBIGUOUS`, `UNSUPPORTED`, `INVALID_INPUT` — explicit non-success states rather than fabricated certainty.
+- `OK`: supported finalized Base ERC-20 transfer effects were found.
+- `NO_SUPPORTED_TRANSFER`: execution succeeded with no supported transfer effect. The `answer` and structured facts still describe the transaction.
+- `PENDING`: the transaction is not yet definitive.
+- `REVERTED`: EVM execution reverted.
+- `RPC_DISAGREEMENT` / `UPSTREAM_ERROR`: providers disagree or a provider failed, so Veyctum fails closed rather than guessing.
+- `NOT_FOUND`, `AMBIGUOUS`, `UNSUPPORTED`, `INVALID_INPUT`: explicit non-success states rather than fabricated certainty.
 
 The chain registry also carries Arbitrum, Optimism, and Polygon; they can be enabled by configuration once needed. Ethereum and Base are enabled by default.
 
@@ -138,11 +136,9 @@ chain|tx_hash|status|block_number|from|to|value_wei
 
 For the shared Base fixture, Veyctum's success-path canonical value is asserted by both unit and live integration tests to match the incumbent format exactly.
 
-Recorded test state: **88 hermetic + 6 live integration tests passing**.
+Recorded test state: **94 hermetic + 6 live integration tests passing**.
 
-## Real proof, not a mock
-
-The Telegraph Hackathon rules ask for evidence that the quality flywheel works in real conditions, not a polished demo. Veyctum's core claims are backed by real paid Telegraph requests, real signals, real transactions, and real x402 settlement.
+## Proof
 
 | Proof | Result |
 |---|---|
@@ -152,7 +148,7 @@ The Telegraph Hackathon rules ask for evidence that the quality flywheel works i
 | Canonical compatibility | Success-path canonical output matches the shared Base fixture exactly |
 | Positive paid request | Real Base USDC transfer served by Veyctum in `1663 ms` |
 | Positive signal | `0x8b782fecb8b5f92e5e5c4307ede66b2a3b462bfbac6014ca9e289281ffb4ef50` |
-| Paid signal through active Miner `9005` | `0xe39910a3033965102effcac686b5f25e18e3a5121b5e6e5fe7c26d6b2cee4e69` (`$0.01`, HTTP 200, 1444 ms) |
+| Paid signal through active Miner `9005` | `0xe39910a3033965102effcac686b5f25e18e3a5121b5e6e5fe7c26d6b2cee4e69` (`$0.01`, HTTP 200, `1444 ms`) |
 | Positive consumer outcome | Protected action changed from `LOCKED` to `RELEASED` exactly once |
 | Negative paid request | Successful approval-only Base transaction served in `1236 ms` |
 | Negative signal | `0x9ea3e072c53bf1904478b2388ae345991595e848924a580c670a92a9db5a87a0` |
@@ -167,17 +163,6 @@ The negative fixture is a real successful USDC approval transaction with no tran
 `0x5c8ea6c032bbba661648924da38a8ecf67bafcf92a8cc81ad58af000f7620994`
 
 The reproducible artifacts are indexed in [`evidence/`](./evidence/).
-
-## Why this fits Telegraph
-
-Telegraph's Miner track rewards verified intelligence that can be ranked and consumed by downstream applications. Veyctum is built around that loop:
-
-1. **Request** — an application asks about a transaction.
-2. **Infer** — Veyctum detects the chain, agrees the facts across two providers, decodes the method, and normalizes any Base transfer effect.
-3. **Validate** — Telegraph evaluates the answer against ground truth.
-4. **Publish** — the result is preserved as a Telegraph signal.
-5. **Act** — a consumer independently verifies the signal before releasing or rejecting a protected action.
-6. **Settle** — paid requests use Telegraph's x402 settlement path.
 
 ## Consumer proof gate
 
@@ -203,9 +188,7 @@ The Telegraph request that creates the signal must use the full response mode:
 {"method":"GET","endpoint":"/lookup","payload":{"chain":"base","format":"full","tx_hash":"0x..."}}
 ```
 
-The reference consumer routes are protected with `x-consumer-api-key` when
-`CONSUMER_AUTH_REQUIRED=true`. Set `CONSUMER_API_KEY` to a long random value in
-the deployment environment. The public Miner lookup endpoint remains unauthenticated.
+The reference consumer routes are protected with `x-consumer-api-key` when `CONSUMER_AUTH_REQUIRED=true`. Set `CONSUMER_API_KEY` to a long random value in the deployment environment. The public Miner lookup endpoint remains unauthenticated.
 
 ```text
 LOCKED -> RELEASED   only on an exact verified match
@@ -227,6 +210,49 @@ BASE_URL='https://veyctum.splitpot.xyz' \
 
 The script creates one frozen action, verifies the real transfer signal, and prints `RELEASED`. It then creates a second action for the approval-only transaction and prints `REJECTED` with `NO_EFFECT`. Consumer routes intentionally require the API key; use the local setup below when a public deployment key is not available.
 
+## How this differs
+
+| Alternative | What it does | Why Veyctum is different |
+|---|---|---|
+| Block explorer / tx API | Shows receipt and logs | Does not normalize semantic payment effects or judge expected outcomes |
+| Receipt-only checker | Treats `status == 1` as success | Fails on approvals, wrong-amount transfers, unrelated calls |
+| Tutorial tx-lookup project | Basic RPC decode | No two-provider agreement, no effect normalization, no consumer gate |
+| Generic Miner wrapper | Passes through raw answer | Does not provide deterministic canonical output or replayable consumer proof |
+
+Veyctum is built for the case where execution success and payment success are not the same thing.
+
+## Honest limitations
+
+- This code is unaudited.
+- The consumer proof path is a reference implementation, not production escrow infrastructure.
+- Base USDC is the first supported transfer effect; other tokens require explicit allowlisting and normalization.
+- Miner registration and scoring depend on external Telegraph validator behavior.
+- The live Miner is intended for testnet/hackathon usage, not production financial settlement.
+
+## What is real
+
+Everything in the shipped path is real. There are no mocked values in this repository. The Miner answers live tx hashes, the consumer gate uses real Telegraph signals, and the proof artifacts are reproducible from the checked-in fixtures.
+
+## Track 3 demand
+
+Track 3 runs from Aug 31 through Sep 7. Veyctum's eligibility for global cash prizes requires a real Track 3 application generating real requests through Miner `9005`.
+
+The planned Track 3 application is a lightweight workflow named **Escrow Verifier**: a public web app where a user submits a Base USDC transaction hash and receives Veyctum's effect verdict before any funds move. When paid collection is enabled during the official window, each completed verification will create one real paid Telegraph request through Miner `9005`.
+
+The preparation page is deployed at https://veyctum.splitpot.xyz/track3, but paid collection is disabled and no Track 3 demand is claimed yet.
+
+To keep demand legitimate and auditable:
+
+- Every counted request is appended to a public JSONL ledger with timestamp, session hash, tx hash, signal hash, duration, and settlement status.
+- The author's own session is excluded from the count through an explicit operator-session exclusion configuration.
+- The same session has a 60-second cooldown, and repeated requests are not used to inflate the total.
+- Only successful x402-settled requests count.
+- The service refuses live collection until the operator exclusions are configured.
+
+The goal is at least 100 valid requests during the 7-day window from organic use, not self-run probes. The public ledger will be the audit trail.
+
+See [`evidence/track3/`](./evidence/track3/) for the published rules and preparation status.
+
 ## Reliability and safety
 
 - For each chain, two independent RPC providers must agree on critical transaction facts, and both must report that chain's expected chain ID.
@@ -237,8 +263,7 @@ The script creates one frozen action, verifies the real transfer signal, and pri
 - Unknown request fields are rejected.
 - Public lookup traffic is rate-limited.
 - Authorization and payment headers are redacted from logs.
-- Reference consumer routes require `x-consumer-api-key` when
-  `CONSUMER_AUTH_REQUIRED=true`; they are separate from the public Miner API.
+- Reference consumer routes require `x-consumer-api-key` when `CONSUMER_AUTH_REQUIRED=true`; they are separate from the public Miner API.
 - Consumer state transitions and audit attempts are persisted atomically in SQLite.
 - Release requires a Telegraph signal and an independent effect cross-check.
 - Secrets are loaded from environment variables and `.env` is ignored.
@@ -282,9 +307,11 @@ Hosted manifest: https://veyctum.splitpot.xyz/veyctum.yaml
 
 Active Explorer registration transaction:
 
-[Base Sepolia transaction `0xd94ac235...7a95`](https://sepolia.basescan.org/tx/0xd94ac2357a6c7c1ba439837fb1c57a0b5a959a9f01405602e2d30e87b65c7a95)
+[Base Sepolia transaction `0xc153c913...569f`](https://sepolia.basescan.org/tx/0xc153c913f6ffc5903304f4689ec65e0e786681fd01155fcd60a959224f2f569f)
 
-Active Explorer manifest SHA-256: `8b29b2a6754922f81f7250bd36b17d418923716deebaa19515d3f4de69b35a52`
+Active Explorer manifest SHA-256: `3191ebf32c287925d197d56214450106aa610738223d45cc210f206da64484c8`
+
+The original registration was `104` with the earlier manifest hash. It remains historical evidence, not the current submission identity.
 
 Rejected replacement registration transaction:
 

@@ -49,6 +49,19 @@ const envSchema = z.object({
     .url()
     .default('https://devnode.telegraphprotocol.com/engine/v1/signal/'),
   TELEGRAPH_SIGNAL_TIMEOUT_MS: z.coerce.number().int().min(100).max(30000).default(5000),
+  // Track 3 application surface. Disabled until the official window opens and
+  // the operator explicitly enables it in the deployment environment.
+  TRACK3_ENABLED: z
+    .string()
+    .default('false')
+    .transform((v) => v.toLowerCase() === 'true'),
+  TRACK3_ENGINE_URL: z.string().url().default('https://devnode.telegraphprotocol.com/engine/v1/ask/9005'),
+  TRACK3_START_AT: z.string().datetime().default('2026-08-31T00:00:00.000Z'),
+  TRACK3_END_AT: z.string().datetime().default('2026-09-07T23:59:59.999Z'),
+  TRACK3_LEDGER_PATH: z.string().default('./data/track3-requests.jsonl'),
+  TRACK3_SESSION_SALT: z.string().default(''),
+  TRACK3_EXCLUDED_SESSION_DIGESTS: z.string().default(''),
+  TRACK3_COOLDOWN_SEC: z.coerce.number().int().min(10).max(86400).default(60),
   MINER_NAME: z.string().default('veyctum'),
   SCHEMA_VERSION: z.string().default(DEFAULT_SCHEMA_VERSION),
 });
