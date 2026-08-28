@@ -138,7 +138,7 @@ chain|tx_hash|status|block_number|from|to|value_wei
 
 For the shared Base fixture, Veyctum's success-path canonical value is asserted by both unit and live integration tests to match the incumbent format exactly.
 
-Recorded test state: **85 hermetic + 6 live integration tests passing**.
+Recorded test state: **88 hermetic + 6 live integration tests passing**.
 
 ## Real proof, not a mock
 
@@ -146,7 +146,7 @@ The Telegraph Hackathon rules ask for evidence that the quality flywheel works i
 
 | Proof | Result |
 |---|---|
-| Miner registration | Miner `9005`, active Explorer registration `104` on Base Sepolia |
+| Miner registration | Miner `9005`, active Explorer registration `262` on Base Sepolia |
 | Stable endpoint | `https://veyctum.splitpot.xyz` |
 | Multi-chain answer | Ethereum transaction method and contract decoded and answered; covered by live integration tests |
 | Canonical compatibility | Success-path canonical output matches the shared Base fixture exactly |
@@ -220,8 +220,8 @@ A caller cannot supply a fabricated lookup result to force a release, and a reje
 The complete positive and negative proof can be replayed against a local or deployed instance with the checked-in script below. It uses the real finalized fixtures and Telegraph signal hashes recorded in `evidence/`, so the result is not a mock:
 
 ```bash
-CONSUMER_API_KEY='your-configured-key' \\
-BASE_URL='https://veyctum.splitpot.xyz' \\
+CONSUMER_API_KEY='your-configured-key' \
+BASE_URL='https://veyctum.splitpot.xyz' \
 ./scripts/replay_consumer_proof.sh
 ```
 
@@ -276,7 +276,7 @@ The hermetic suite does not require network access. Integration tests exercise l
 
 ## Telegraph registration artifact
 
-[`veyctum.yaml`](./veyctum.yaml) is the current repository and hosted manifest. It declares multi-chain auto-detection, answer-first scoring output, and explicit full mode for effect verification. The active Explorer integration is registration `104` for Miner `9005`; it still reports the older on-chain manifest hash. A later replacement registration (`213`) committed the new hash but was rejected because its YAML URL was stored as `veyctum` instead of the full HTTPS URL. Do not use registration `213` as the submission identity.
+[`veyctum.yaml`](./veyctum.yaml) is the current repository and hosted manifest. It declares multi-chain auto-detection, answer-first scoring output, and explicit full mode for effect verification. The current Explorer integration is registration `262` for Miner `9005`; its on-chain hash matches the hosted manifest. Registration `104` is the original integration, and replacement registration `213` was rejected because its YAML URL was stored as `veyctum` instead of the full HTTPS URL. Do not use registration `213` as the submission identity.
 
 Hosted manifest: https://veyctum.splitpot.xyz/veyctum.yaml
 

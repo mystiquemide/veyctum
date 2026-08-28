@@ -5,6 +5,7 @@ import {
   extractSignalEffects,
   extractSignalTxHash,
   signalMatchesHash,
+  signalMatchesMiner,
   signalMatchesTx,
   type TelegraphSignal,
 } from '../src/telegraph.js';
@@ -24,6 +25,8 @@ function signal(tx = TX, effects: TransferEffect[] = [FX]): TelegraphSignal {
   return {
     signal_hash: '0x' + 'bb'.repeat(32),
     payload: {
+      miner_slug: 'veyctum',
+      subnet_id: '9005',
       response: { tx_hash: tx, effects },
     },
   };
@@ -65,6 +68,12 @@ describe('telegraph signal verification helpers (REV-009)', () => {
     expect(signalMatchesHash(signal(), '0x' + 'bb'.repeat(32))).toBe(true);
     expect(signalMatchesHash(signal(), '0x' + 'cc'.repeat(32))).toBe(false);
     expect(signalMatchesHash({ payload: {} }, '0x' + 'bb'.repeat(32))).toBe(false);
+  });
+
+  it('requires signal provenance to match Veyctum Miner 9005', () => {
+    expect(signalMatchesMiner(signal())).toBe(true);
+    expect(signalMatchesMiner({ ...signal(), payload: { ...signal().payload, miner_slug: 'other' } })).toBe(false);
+    expect(signalMatchesMiner({ ...signal(), payload: { ...signal().payload, subnet_id: '10001' } })).toBe(false);
   });
 
   it('effectsEqual is exact and order-sensitive', () => {

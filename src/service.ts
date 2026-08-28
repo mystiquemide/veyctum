@@ -1,6 +1,6 @@
 import { formatEther, type Address } from 'viem';
 import type { AppConfig } from './config.js';
-import { normalizeAddr, type LookupResult, type MethodInfo } from './domain.js';
+import { BASE_CHAIN_ID, normalizeAddr, type LookupResult, type MethodInfo } from './domain.js';
 import { stateToStatus, toLookupError } from './errors.js';
 import { canonicalOf } from './canonical.js';
 import type { ReadinessReport } from './rpc.js';
@@ -117,7 +117,9 @@ export class LookupService {
 
       // Base-only ERC-20 USDC transfer effects power the consumer proof gate; on
       // other chains this is simply empty and the summary carries the answer.
-      const effects = normalizeEffects(facts, normalizeAddr(this.config.USDC_CONTRACT) as Address);
+      const effects = chainId === BASE_CHAIN_ID
+        ? normalizeEffects(facts, normalizeAddr(this.config.USDC_CONTRACT) as Address)
+        : [];
       if (effects.length === 0) {
         // BR-006: no supported effect -> abstention, never inferred success.
         return { ...base, state: 'NO_SUPPORTED_TRANSFER', status: 'success', effects: [] };

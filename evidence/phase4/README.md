@@ -17,7 +17,7 @@ Date: 2026-08-17. Miner id 9005.
 - Veyctum returned NO_SUPPORTED_TRANSFER (successful receipt, zero effects), duration_ms 1236, cost 0.01
 - signal_hash: 0x9ea3e072c53bf1904478b2388ae345991595e848924a580c670a92a9db5a87a0
   (miner_slug veyctum, subnet_id 9005, routing "user-directed"; recorded payload effects [] preserved)
-- Artifacts: ask9005_negative/probe_20260817T223204Z_{challenge,meta,paymentpayload,request,response,signal}.json
+- Public artifacts: ask9005_negative/probe_20260817T223204Z_{challenge,meta,request,response,signal}.json. The signed payment authorization is retained locally only.
 
 ## Consumer negative flow (THE invariant, enforced live)
 

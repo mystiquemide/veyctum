@@ -17,7 +17,7 @@ Date: 2026-08-17. Miner id 9005, registered this session (CP-002E).
   payer 0x65ae39fd36f2a9fa8d738a0fac369c0cdc507a99,
   tx 0xc9af86610f2c58822b662c5adcad698a5ef7d02321f55c1f1ee1fba88bc6bde9,
   network eip155:84532 (Base Sepolia)
-- Artifacts: ask9005/probe_20260817T221841Z_{challenge,meta,paymentpayload,request,response,signal}.json
+- Public artifacts: ask9005/probe_20260817T221841Z_{challenge,meta,request,response,signal}.json. The signed payment authorization is retained locally only.
 - Explorer: https://sepolia.basescan.org/tx/0xc9af86610f2c58822b662c5adcad698a5ef7d02321f55c1f1ee1fba88bc6bde9
 
 ## Positive loop: consumer gate released on the real signal (self-sufficient verify)

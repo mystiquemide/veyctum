@@ -1,12 +1,23 @@
 # CP-002E/CP-002F: Miner registration evidence (2026-08-17 / 2026-08-25)
 
-## Replacement registration (Base Sepolia, 2026-08-25)
+## Current active registration (Base Sepolia, 2026-08-28)
+
+- Tx: 0xc153c913f6ffc5903304f4689ec65e0e786681fd01155fcd60a959224f2f569f
+- registrationId: 262
+- yamlUrl: https://veyctum.splitpot.xyz/veyctum.yaml
+- yamlHash: `0x3191ebf32c287925d197d56214450106aa610738223d45cc210f206da64484c8`
+- status: transaction succeeded; Explorer activation status `active`
+- rejection reason: none
+- This is the current submission identity.
+
+## Rejected replacement registration (Base Sepolia, 2026-08-25)
 
 - Tx: 0xfb1a5f22259d6096f664a03048b53b1c5a8e27a2a1e7e28cdf1a3a02680afdbd
 - registrationId: 213
 - yamlHash: `0x3191ebf32c287925d197d56214450106aa610738223d45cc210f206da64484c8`
-- status: success; on-chain record active=true
-- The Telegraph discovery API may continue to show legacy ID 9005 until node-side rehydration completes.
+- status: transaction succeeded on-chain; dispatcher status: rejected
+- rejection: YAML URL was stored as `veyctum` instead of the full HTTPS URL
+- This entry is not the active Explorer integration and must not be used for submission.
 
 ## On-chain registration (Base Sepolia)
 

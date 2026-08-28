@@ -8,7 +8,7 @@ The shortest review path is below.
 
 [`registration/`](./registration/)
 
-Confirms the Base Sepolia registration history. Legacy registration `104` / Miner `9005` committed the original manifest. Replacement registration `213` committed the current multi-chain/answer-first manifest in transaction `0xfb1a5f22259d6096f664a03048b53b1c5a8e27a2a1e7e28cdf1a3a02680afdbd`.
+Confirms the Base Sepolia registration history. Explorer registration `262` is the current active submission identity and commits the hosted multi-chain manifest hash. Registration `104` is the original integration, while replacement registration `213` was rejected because its YAML URL was malformed.
 
 ## 2. Telegraph compatibility and paid request groundwork
 

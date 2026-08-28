@@ -27,4 +27,4 @@
 - Verity answer carries no ERC-20 effect; Veyctum serves the same fixture with the normalized effect.
 - Once Veyctum is registered, this routed loop includes Veyctum.
 
-Artifacts: evidence/phase1/paid/routed_baseline_*.json (request/challenge/paymentpayload/meta/response/signal).
+Artifacts: evidence/phase1/paid/routed_baseline_*.json (request/challenge/meta/response/signal); signed payment payloads are local-only.

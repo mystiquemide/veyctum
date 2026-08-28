@@ -1,7 +1,7 @@
 # Phase 1 evidence — CP-001 (2026-08-17)
 
-Read-only snapshots captured from the live Telegraph testnet and official sources.
-Paid-request evidence will be appended here after the x402 wallet step is approved.
+Read-only snapshots captured from the live Telegraph testnet and official sources,
+followed by the paid diagnostic requests recorded below.
 
 | File | Source | Note |
 |---|---|---|

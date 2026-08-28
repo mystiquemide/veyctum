@@ -42,7 +42,9 @@ export async function buildApp(
         censor: '[redacted]',
       },
     },
-    trustProxy: true,
+    // Trust forwarding headers only from the local Caddy reverse proxy. Trusting
+    // arbitrary clients would let callers spoof req.ip and bypass rate limits.
+    trustProxy: (address, hop) => hop === 0 && (address === '127.0.0.1' || address === '::1'),
     // Reject unknown query fields at the boundary (FR-002) instead of
     // silently stripping them (Fastify's default Ajv behavior).
     ajv: { customOptions: { removeAdditional: false } },
@@ -56,7 +58,8 @@ export async function buildApp(
 
   // NFR-005 / REV-002: fixed-window rate limit keyed by req.ip (trustProxy-aware).
   app.addHook('onRequest', async (req, reply) => {
-    if (req.url.startsWith('/health') || req.url.startsWith('/ready')) return;
+    const path = req.url.split('?', 1)[0];
+    if (path === '/health' || path === '/ready') return;
     limiter.prune();
     const verdict = limiter.check(req.ip);
     if (!verdict.allowed) {
@@ -86,6 +89,16 @@ export async function buildApp(
         });
       }
     }
+  });
+
+  // API responses do not need framing, content sniffing, referrer forwarding,
+  // or browser capability delegation. Set these at the application boundary so
+  // every route, including errors, gets the same baseline protection.
+  app.addHook('onSend', async (_req, reply) => {
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('X-Frame-Options', 'DENY');
+    reply.header('Referrer-Policy', 'no-referrer');
+    reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   });
 
   app.get('/', async () => ({

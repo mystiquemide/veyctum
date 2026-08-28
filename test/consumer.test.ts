@@ -70,7 +70,7 @@ function okLookup(effects: unknown[] = [FIXTURE_EFFECT]): LookupResult {
 
 function stateLookup(state: string): LookupResult {
   return {
-    schema_version: '1.0.0', chain: 'unknown', chain_id: 8453, tx_hash: TX_HASH,
+    schema_version: '1.0.0', chain: 'base', chain_id: 8453, tx_hash: TX_HASH,
     state: state as LookupState, status: 'error',
     summary: 'unresolved', method: { selector: null, name: null, signature: null, source: 'none', kind: 'unknown' },
     from: null, to: null, native_symbol: 'ETH', native_value: '0', sender_is_recipient: null,
@@ -89,7 +89,7 @@ class FakeSignalClient implements SignalFetcher {
 function goodSignal(): TelegraphSignal {
   return {
     signal_hash: SIGNAL,
-    payload: { response: { tx_hash: TX_HASH, effects: [FIXTURE_EFFECT] } },
+    payload: { miner_slug: 'veyctum', subnet_id: '9005', response: { tx_hash: TX_HASH, effects: [FIXTURE_EFFECT] } },
   };
 }
 
@@ -146,7 +146,7 @@ describe('consumer proof gate, self-sufficient verify (FR-020, BR-007, REV-009)'
 
   it('rejects a signal that records a different transaction (SIGNAL_MISMATCH)', async () => {
     await createAction(app, 'othertx');
-    const signals = new Map([[SIGNAL, { signal_hash: SIGNAL, payload: { response: { tx_hash: '0x' + 'ee'.repeat(32), effects: [FIXTURE_EFFECT] } } }]]);
+    const signals = new Map([[SIGNAL, { signal_hash: SIGNAL, payload: { miner_slug: 'veyctum', subnet_id: '9005', response: { tx_hash: '0x' + 'ee'.repeat(32), effects: [FIXTURE_EFFECT] } } }]]);
     const { app: app2 } = await makeApp({ signals });
     await createAction(app2, 'othertx');
     const res = await app2.inject({ method: 'POST', url: '/consumer/actions/othertx/verify', payload: { tx_hash: TX_HASH, signal_hash: SIGNAL } });
@@ -154,9 +154,29 @@ describe('consumer proof gate, self-sufficient verify (FR-020, BR-007, REV-009)'
     expect(res.json().error).toBe('SIGNAL_MISMATCH');
   });
 
+  it('rejects a matching signal from a different Miner (SIGNAL_MISMATCH)', async () => {
+    const signals = new Map([[SIGNAL, {
+      signal_hash: SIGNAL,
+      payload: { miner_slug: 'other-miner', subnet_id: '9005', response: { tx_hash: TX_HASH, effects: [FIXTURE_EFFECT] } },
+    }]]);
+    const { app: app2 } = await makeApp({ signals });
+    await createAction(app2, 'otherminer');
+    const res = await app2.inject({ method: 'POST', url: '/consumer/actions/otherminer/verify', payload: { tx_hash: TX_HASH, signal_hash: SIGNAL } });
+    expect(res.statusCode).toBe(422);
+    expect(res.json().error).toBe('SIGNAL_MISMATCH');
+  });
+
+  it('rejects non-Base observations in the Base consumer gate', async () => {
+    const { app: app2 } = await makeApp({ lookup: { ...okLookup(), chain: 'ethereum', chain_id: 1 } });
+    await createAction(app2, 'wrongchain');
+    const res = await app2.inject({ method: 'POST', url: '/consumer/actions/wrongchain/verify', payload: { tx_hash: TX_HASH, signal_hash: SIGNAL } });
+    expect(res.statusCode).toBe(422);
+    expect(res.json().error).toBe('CHAIN_MISMATCH');
+  });
+
   it('rejects a signal whose recorded effects disagree with the observation (SIGNAL_MISMATCH)', async () => {
     await createAction(app, 'fxmismatch');
-    const signals = new Map([[SIGNAL, { signal_hash: SIGNAL, payload: { response: { tx_hash: TX_HASH, effects: [{ ...FIXTURE_EFFECT, raw_amount: '1' }] } } }]]);
+    const signals = new Map([[SIGNAL, { signal_hash: SIGNAL, payload: { miner_slug: 'veyctum', subnet_id: '9005', response: { tx_hash: TX_HASH, effects: [{ ...FIXTURE_EFFECT, raw_amount: '1' }] } } }]]);
     const { app: app2 } = await makeApp({ signals });
     await createAction(app2, 'fxmismatch');
     const res = await app2.inject({ method: 'POST', url: '/consumer/actions/fxmismatch/verify', payload: { tx_hash: TX_HASH, signal_hash: SIGNAL } });
@@ -194,7 +214,7 @@ describe('consumer proof gate, self-sufficient verify (FR-020, BR-007, REV-009)'
   });
 
   it('rejects an approval-only transaction with no transfer effect (NO_EFFECT)', async () => {
-    const { app: app2 } = await makeApp({ lookup: stateLookup('NO_SUPPORTED_TRANSFER'), signals: new Map([[SIGNAL, { signal_hash: SIGNAL, payload: { response: { tx_hash: TX_HASH, effects: [] } } }]]) });
+    const { app: app2 } = await makeApp({ lookup: stateLookup('NO_SUPPORTED_TRANSFER'), signals: new Map([[SIGNAL, { signal_hash: SIGNAL, payload: { miner_slug: 'veyctum', subnet_id: '9005', response: { tx_hash: TX_HASH, effects: [] } } }]]) });
     await createAction(app2, 'approval');
     const res = await app2.inject({ method: 'POST', url: '/consumer/actions/approval/verify', payload: { tx_hash: TX_HASH, signal_hash: SIGNAL } });
     expect(res.statusCode).toBe(200);
@@ -204,7 +224,7 @@ describe('consumer proof gate, self-sufficient verify (FR-020, BR-007, REV-009)'
 
   it('keeps LOCKED on retryable states (PENDING, RPC_DISAGREEMENT, NOT_FOUND)', async () => {
     for (const state of ['PENDING', 'RPC_DISAGREEMENT', 'NOT_FOUND']) {
-      const { app: app2 } = await makeApp({ lookup: stateLookup(state), signals: new Map([[SIGNAL, { signal_hash: SIGNAL, payload: { response: { tx_hash: TX_HASH, effects: [] } } }]]) });
+      const { app: app2 } = await makeApp({ lookup: stateLookup(state), signals: new Map([[SIGNAL, { signal_hash: SIGNAL, payload: { miner_slug: 'veyctum', subnet_id: '9005', response: { tx_hash: TX_HASH, effects: [] } } }]]) });
       await createAction(app2, `pend-${state}`);
       const res = await app2.inject({ method: 'POST', url: `/consumer/actions/pend-${state}/verify`, payload: { tx_hash: TX_HASH, signal_hash: SIGNAL } });
       expect(res.statusCode).toBe(200);
@@ -214,7 +234,7 @@ describe('consumer proof gate, self-sufficient verify (FR-020, BR-007, REV-009)'
   });
 
   it('rejects a reverted execution (definitive failure, not retryable)', async () => {
-    const { app: app2 } = await makeApp({ lookup: stateLookup('REVERTED'), signals: new Map([[SIGNAL, { signal_hash: SIGNAL, payload: { response: { tx_hash: TX_HASH, effects: [] } } }]]) });
+    const { app: app2 } = await makeApp({ lookup: stateLookup('REVERTED'), signals: new Map([[SIGNAL, { signal_hash: SIGNAL, payload: { miner_slug: 'veyctum', subnet_id: '9005', response: { tx_hash: TX_HASH, effects: [] } } }]]) });
     await createAction(app2, 'rev');
     const res = await app2.inject({ method: 'POST', url: '/consumer/actions/rev/verify', payload: { tx_hash: TX_HASH, signal_hash: SIGNAL } });
     expect(res.json().action.status).toBe('REJECTED');
@@ -232,7 +252,7 @@ describe('consumer proof gate, self-sufficient verify (FR-020, BR-007, REV-009)'
   });
 
   it('exposes action + audit trail (FR-019 audit entry)', async () => {
-    const { app: app2 } = await makeApp({ lookup: stateLookup('NO_SUPPORTED_TRANSFER'), signals: new Map([[SIGNAL, { signal_hash: SIGNAL, payload: { response: { tx_hash: TX_HASH, effects: [] } } }]]) });
+    const { app: app2 } = await makeApp({ lookup: stateLookup('NO_SUPPORTED_TRANSFER'), signals: new Map([[SIGNAL, { signal_hash: SIGNAL, payload: { miner_slug: 'veyctum', subnet_id: '9005', response: { tx_hash: TX_HASH, effects: [] } } }]]) });
     await createAction(app2, 'audit');
     await app2.inject({ method: 'POST', url: '/consumer/actions/audit/verify', payload: { tx_hash: TX_HASH, signal_hash: SIGNAL } });
     const res = await app2.inject({ method: 'GET', url: '/consumer/actions/audit' });

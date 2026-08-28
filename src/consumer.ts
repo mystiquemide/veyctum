@@ -13,7 +13,7 @@ import type {
   SignalFetcher,
   TelegraphSignal,
 } from './telegraph.js';
-import { effectsEqual, extractSignalEffects, signalMatchesHash, signalMatchesTx } from './telegraph.js';
+import { effectsEqual, extractSignalEffects, signalMatchesHash, signalMatchesMiner, signalMatchesTx } from './telegraph.js';
 
 /**
  * Consumer proof gate (FR-020, BR-007, REV-009).
@@ -121,11 +121,15 @@ export function registerConsumerRoutes(
         detail: `signal ${signal_hash} could not be resolved on the Telegraph Engine`,
       });
     }
-    if (!signalMatchesHash(signal, signal_hash) || !signalMatchesTx(signal, tx_hash)) {
+    if (
+      !signalMatchesHash(signal, signal_hash) ||
+      !signalMatchesMiner(signal) ||
+      !signalMatchesTx(signal, tx_hash)
+    ) {
       // The signal records a different transaction: refuse (REV-009).
       return reply.code(422).send({
         error: 'SIGNAL_MISMATCH',
-        detail: `signal ${signal_hash} identity or transaction does not match the requested proof`,
+        detail: `signal ${signal_hash} identity, Miner, or transaction does not match the requested proof`,
       });
     }
 
@@ -155,6 +159,12 @@ export function registerConsumerRoutes(
         reason: `retryable verification state ${lookup.state}; action remains locked (FR-018)`,
       };
     } else {
+      if (lookup.chain_id !== BASE_CHAIN_ID || lookup.chain !== 'base') {
+        return reply.code(422).send({
+          error: 'CHAIN_MISMATCH',
+          detail: `consumer proof gate only accepts Base mainnet observations (${BASE_CHAIN_ID})`,
+        });
+      }
       const cmp = compareEffect(expected, effects);
       const reasonOf = (r: CompareReason): string =>
         r === 'MATCHED'

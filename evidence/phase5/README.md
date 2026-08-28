@@ -1,7 +1,10 @@
-# CP-002G: Paid request after current registration (2026-08-25)
+# CP-002G: Paid request through active Miner 9005 (2026-08-25)
 
-This phase records a direct x402 request through Telegraph Miner `9005` after
-the current manifest was committed in registration `213`.
+This phase records a direct x402 request through Telegraph Miner `9005` while
+Explorer registration `104` was active. Replacement registration `213` committed
+the newer manifest hash but was rejected because its YAML URL was malformed.
+Explorer registration `262` later corrected the URL and is now the active
+submission identity.
 
 ## Paid request
 
@@ -22,7 +25,9 @@ the current manifest was committed in registration `213`.
 - Normalized Base USDC effect: `237440081636` raw units from
   `0x2192bc3b4028acc1113f2cd9ac2cba70c36520db` to
   `0xb2cc224c1c9fee385f8ad6a55b4d94e92359dc59`
-- Full structured response retained in `ask9005/`
+- Full structured response and signal response retained in `ask9005/`; the
+  signed payment authorization is intentionally excluded from the public repo.
 
-The raw request, challenge, signed payment payload, response, settlement
-metadata, and signal response are retained in the adjacent timestamped files.
+The raw request, challenge, response, settlement metadata, and signal response
+are retained in the adjacent timestamped files. The signed payment payload is
+retained locally only and is not part of the public repository.

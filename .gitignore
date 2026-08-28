@@ -11,9 +11,20 @@ data/
 **/wallet*.json
 **/*wallet*.json
 
+# Signed x402 authorizations are one-time payment evidence and should not be public.
+evidence/**/*paymentpayload*.json
+
+# Internal execution/review state. Keep local, never publish.
+PROJECT_STATE.md
+CODE_REVIEW.md
+REVIEW_CONSOLIDATED.md
+watch_daemon_questions.sh
+watch_discovery.sh
+.qwen/
+evidence/scoring/
+
 # Local/internal execution notes
 PROJECT_PLAN.md
-PROJECT_STATE.md
 HANDOFF.md
 MEMORY.md
 LEFT_OFF.md

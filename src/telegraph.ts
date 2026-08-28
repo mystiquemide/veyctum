@@ -23,6 +23,8 @@ export interface TelegraphSignal {
     [key: string]: unknown;
   };
   payload?: {
+    miner_slug?: unknown;
+    subnet_id?: unknown;
     response?: SignalPayloadResponse;
     [key: string]: unknown;
   };
@@ -70,6 +72,16 @@ export function extractSignalTxHash(signal: TelegraphSignal): string | null {
 export function signalMatchesHash(signal: TelegraphSignal, signalHash: string): boolean {
   const raw = signal.signal_hash;
   return typeof raw === 'string' && raw.toLowerCase() === signalHash.toLowerCase();
+}
+
+/** The signal must have been produced by this Miner, not merely contain similar data. */
+export function signalMatchesMiner(signal: TelegraphSignal, minerSlug = 'veyctum', subnetId = '9005'): boolean {
+  const slug = signal?.payload?.miner_slug ?? signal?.signal?.miner_slug;
+  const subnet = signal?.payload?.subnet_id ?? signal?.signal?.subnet_id;
+  return (
+    typeof slug === 'string' && slug.toLowerCase() === minerSlug.toLowerCase() &&
+    typeof subnet === 'string' && subnet === subnetId
+  );
 }
 
 /** The recorded effects inside a signal's payload.response (Veyctum answers). */

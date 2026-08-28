@@ -74,6 +74,10 @@ describe('server surface (FR-025, FR-002)', () => {
     const body = res.json();
     expect(body.status).toBe('ok');
     expect(body.service).toBe('veyctum');
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['x-frame-options']).toBe('DENY');
+    expect(res.headers['referrer-policy']).toBe('no-referrer');
+    expect(res.headers['permissions-policy']).toContain('camera=()');
   });
 
   it('GET / returns a judge quickstart instead of a framework 404', async () => {
