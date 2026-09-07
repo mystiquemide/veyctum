@@ -19,3 +19,10 @@ description = "Public paid Miner result artifacts; token addresses are not crede
 paths = [
   '''evidence/phase5/ask9005/.*_(response|signal)\.json$''',
 ]
+
+[[allowlists]]
+description = "Public Base Sepolia wallet address used as the operator-payer exclusion fixture; an address is not a credential"
+regexTarget = "line"
+regexes = [
+  '''0x65ae39fd36f2a9fa8d738a0fac369c0cdc507a99''',
+]
