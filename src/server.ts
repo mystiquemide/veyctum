@@ -10,6 +10,8 @@ import { ConsumerStore } from './consumerStore.js';
 import { registerConsumerRoutes } from './consumer.js';
 import { TelegraphSignalClient, type SignalFetcher } from './telegraph.js';
 import { registerTrack3Routes } from './track3.js';
+import { registerAssetRoutes } from './assets.js';
+import { TRACK3_LANDING_PAGE } from './landingPage.js';
 
 /**
  * Miner API surface (FR-025, FR-002):
@@ -58,9 +60,14 @@ export async function buildApp(
   });
 
   // NFR-005 / REV-002: fixed-window rate limit keyed by req.ip (trustProxy-aware).
+  // Static HTML pages and self-hosted assets are constant-string responses and
+  // do not consume the API budget; everything else (lookup, engine forwarding,
+  // status, ledger, consumer routes) stays limited.
+  const staticPagePaths = new Set(['/', '/track3', '/track3/app', '/app']);
   app.addHook('onRequest', async (req, reply) => {
     const path = req.url.split('?', 1)[0];
-    if (path === '/health' || path === '/ready') return;
+    if (path === '/health' || path === '/ready' || path?.startsWith('/assets/')) return;
+    if (req.method === 'GET' && path !== undefined && staticPagePaths.has(path)) return;
     limiter.prune();
     const verdict = limiter.check(req.ip);
     if (!verdict.allowed) {
@@ -102,18 +109,24 @@ export async function buildApp(
     reply.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   });
 
-  app.get('/', async () => ({
-    service: config.MINER_NAME,
-    description: 'Multi-chain EVM transaction lookup with Base USDC effect normalization.',
-    endpoints: {
-      health: '/health',
-      ready: '/ready',
-      answer: '/lookup?tx_hash=0x...',
-      full: '/lookup?tx_hash=0x...&format=full',
-      manifest: '/veyctum.yaml',
-    },
-    consumer: 'Consumer routes require x-consumer-api-key when CONSUMER_AUTH_REQUIRED=true.',
-  }));
+  registerAssetRoutes(app);
+
+  app.get('/', async (request, reply) => {
+    const hostname = (request.headers.host ?? '').split(':')[0]?.toLowerCase() ?? '';
+    if (hostname === 'proof.midelabs.xyz') return reply.type('text/html; charset=utf-8').send(TRACK3_LANDING_PAGE);
+    return {
+      service: config.MINER_NAME,
+      description: 'Multi-chain EVM transaction lookup with Base USDC effect normalization.',
+      endpoints: {
+        health: '/health',
+        ready: '/ready',
+        answer: '/lookup?tx_hash=0x...',
+        full: '/lookup?tx_hash=0x...&format=full',
+        manifest: '/veyctum.yaml',
+      },
+      consumer: 'Consumer routes require x-consumer-api-key when CONSUMER_AUTH_REQUIRED=true.',
+    };
+  });
 
   app.get('/health', async () => ({ status: 'ok', service: config.MINER_NAME, time: new Date().toISOString() }));
 

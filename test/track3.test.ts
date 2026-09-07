@@ -60,6 +60,50 @@ describe('Track 3 preparation and ledger guard', () => {
     await app.close();
   });
 
+  it('rejects an operator payer before forwarding a paid retry', async () => {
+    const config = loadConfig({
+      RATE_LIMIT_PER_SEC: '1000',
+      CONSUMER_DB_PATH: ':memory:',
+      CONSUMER_AUTH_REQUIRED: 'false',
+      TRACK3_LEDGER_PATH: ':memory:',
+      TRACK3_ENABLED: 'true',
+      TRACK3_EXCLUDED_PAYER_ADDRESSES: '0x65ae39fd36f2a9fa8d738a0fac369c0cdc507a99',
+      TRACK3_START_AT: '2026-08-01T00:00:00.000Z',
+      TRACK3_END_AT: '2026-09-30T23:59:59.999Z',
+    });
+    const app = await buildApp(config, new LookupService(config), new ConsumerStore(':memory:'));
+    const payment = Buffer.from(JSON.stringify({ payload: { authorization: { from: '0x65Ae39Fd36f2a9Fa8d738A0FaC369c0CDc507a99' } } })).toString('base64');
+    const res = await app.inject({
+      method: 'POST',
+      url: '/track3/engine',
+      headers: { 'payment-signature': payment },
+      payload: { tx_hash: '0x' + 'a'.repeat(64) },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json()).toMatchObject({ error: 'EXCLUDED_PAYER' });
+    const status = await app.inject({ method: 'GET', url: '/track3/status' });
+    expect(status.json()).toMatchObject({ operator_payer_exclusion_configured: true, valid_requests: 0 });
+    await app.close();
+  });
+
+  it('serves static pages without consuming the rate limit budget', async () => {
+    const config = loadConfig({
+      RATE_LIMIT_PER_SEC: '1',
+      RATE_LIMIT_WINDOW_MS: '1000',
+      CONSUMER_DB_PATH: ':memory:',
+      CONSUMER_AUTH_REQUIRED: 'false',
+      TRACK3_LEDGER_PATH: ':memory:',
+      TRACK3_ENABLED: 'false',
+    });
+    const app = await buildApp(config, new LookupService(config), new ConsumerStore(':memory:'));
+    for (let i = 0; i < 6; i++) {
+      const page = await app.inject({ method: 'GET', url: '/app' });
+      expect(page.statusCode).toBe(200);
+      expect(page.headers['content-type']).toContain('text/html');
+    }
+    await app.close();
+  });
+
   it('forwards the real Engine payment challenge without counting an unpaid request', async () => {
     const config = loadConfig({
       RATE_LIMIT_PER_SEC: '1000',

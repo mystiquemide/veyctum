@@ -233,25 +233,23 @@ Veyctum is built for the case where execution success and payment success are no
 
 Everything in the shipped path is real. There are no mocked values in this repository. The Miner answers live tx hashes, the consumer gate uses real Telegraph signals, and the proof artifacts are reproducible from the checked-in fixtures.
 
-## Track 3 demand
+## Track 3 application demand
 
-Track 3 runs from Aug 31 through Sep 7. Veyctum's eligibility for global cash prizes requires a real Track 3 application generating real requests through Miner `9005`.
+Track 3 runs from Aug 31 through Sep 7. Veyctum's live Track 3 application is **Veyctum Proof** at https://proof.midelabs.xyz/. It forwards completed user verification flows through the Telegraph Engine to Miner `9005`.
 
-The planned Track 3 application is a lightweight workflow named **Escrow Verifier**: a public web app where a user submits a Base USDC transaction hash and receives Veyctum's effect verdict before any funds move. When paid collection is enabled during the official window, each completed verification will create one real paid Telegraph request through Miner `9005`.
-
-The preparation page is deployed at https://veyctum.splitpot.xyz/track3, but paid collection is disabled and no Track 3 demand is claimed yet.
+The application exposes its live window, mode, reconciled count, and distinct-session count at https://proof.midelabs.xyz/track3/status. The anonymized JSONL ledger is available at https://proof.midelabs.xyz/track3/ledger.jsonl and is only appended after a settled request passes the published rules.
 
 To keep demand legitimate and auditable:
 
 - Every counted request is appended to a public JSONL ledger with timestamp, session hash, tx hash, signal hash, duration, and settlement status.
-- The author's own session is excluded from the count through an explicit operator-session exclusion configuration.
+- The deployment has explicit operator exclusions for the smoke-test session and the operator payer wallet. Those requests are rejected before a paid retry reaches Telegraph and never enter the ledger.
 - The same session has a 60-second cooldown, and repeated requests are not used to inflate the total.
 - Only successful x402-settled requests count.
-- The service refuses live collection until the operator exclusions are configured.
+- Mock, replayed, automated, reciprocal, incentivized, and self-run traffic is excluded.
 
-The goal is at least 100 valid requests during the 7-day window from organic use, not self-run probes. The public ledger will be the audit trail.
+The goal is at least 100 valid requests during the 7-day window from organic use, not self-run probes. The live count is not a claim of eligibility until the ledger is reconciled against Telegraph signals and Base Sepolia settlements.
 
-See [`evidence/track3/`](./evidence/track3/) for the published rules and preparation status.
+See [`evidence/track3/`](./evidence/track3/) for the published rules and application status.
 
 ## Reliability and safety
 

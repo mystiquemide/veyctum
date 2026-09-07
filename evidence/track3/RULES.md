@@ -1,8 +1,8 @@
 # Track 3 request-validity rules
 
-Status: preparation only. Track 3 opens 2026-08-31 00:00 UTC and closes 2026-09-07 23:59 UTC.
+Status: live collection enabled on 2026-09-07. Track 3 opens 2026-08-31 00:00 UTC and closes 2026-09-07 23:59 UTC.
 
-These rules are published before the collection window. They are intentionally stricter than the minimum hackathon wording so any reported demand is auditable and conservative.
+These rules were published before the collection window. They are intentionally stricter than the minimum hackathon wording so any reported demand is auditable and conservative.
 
 ## What counts
 
@@ -33,9 +33,9 @@ The application records only the minimum anonymized audit metadata needed to rec
 
 ## Application status
 
-The Escrow Verifier preparation page is deployed at https://veyctum.splitpot.xyz/track3. Paid Engine forwarding remains disabled until the official window opens and an explicit operator-session exclusion list is configured.
+The Veyctum Proof app is live at https://proof.midelabs.xyz/ inside the official UTC window. Paid Engine forwarding is enabled. The deployment rejects the configured operator smoke-test session and operator payer wallet before any paid retry is forwarded or counted. Live mode and the current reconciled total are exposed at https://proof.midelabs.xyz/track3/status.
 
-## Audit commitment
+The ledger is append-only and remains empty until a real external application request completes with a successful x402 settlement and a Telegraph signal. No demand total or eligibility claim is made before reconciliation against the signal and settlement artifacts.
 
 The final report will publish the valid-request total, the anonymized ledger, the date window, the number of distinct session digests, and excluded-request reasons. No eligibility claim will be made before the ledger is reconciled against Telegraph signals and settlements.
 

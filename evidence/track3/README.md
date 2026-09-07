@@ -1,8 +1,8 @@
-# Track 3 preparation
+# Track 3 live application evidence
 
-The planned Track 3 application is **Escrow Verifier**. It is a small, public workflow that lets a user submit an EVM transaction hash and inspect whether the expected payment effect was observed before a protected action proceeds.
+The production **Veyctum Proof** app is live at https://proof.midelabs.xyz/ during the official UTC window, forwarding completed user flows through Telegraph Miner `9005`.
 
-The preparation page is deployed, but paid collection is disabled and no Track 3 demand is counted during preparation. The official window is 2026-08-31 through 2026-09-07 UTC.
+The application status endpoint is https://proof.midelabs.xyz/track3/status. It reports the active window, live/closed mode, reconciled valid-request count, and distinct anonymized sessions. The public ledger is https://proof.midelabs.xyz/track3/ledger.jsonl.
 
 - Rules: [`RULES.md`](./RULES.md)
 - Current Miner: `9005`
@@ -12,23 +12,23 @@ The preparation page is deployed, but paid collection is disabled and no Track 3
 
 ## Ledger schema
 
-When paid collection is enabled, its append-only ledger will use one JSON object per line with this shape:
+Each accepted request is one JSON object per line with this shape:
 
 ```json
 {"timestamp":"2026-08-31T00:00:00Z","session_digest":"sha256:truncated","tx_hash":"0x...","signal_hash":"0x...","settled":true,"duration_ms":1234}
 ```
 
-The ledger will be published only after a request passes the rules in `RULES.md`. It will not contain raw IP addresses, private keys, payment authorizations, or other credentials.
+The ledger is appended only after the request passes the rules in `RULES.md` and Telegraph confirms a successful x402 settlement. It contains no raw IP addresses, private keys, payment authorizations, or other credentials.
 
-## Preparation checklist
+## Verification status
 
 - [x] Publish request-validity rules before the window opens
 - [x] Confirm Miner `9005` and active registration `262`
 - [x] Confirm the hosted manifest and registered hash agree
 - [x] Prepare the under-three-minute proof demo
-- [x] Deploy Escrow Verifier preparation page at https://veyctum.splitpot.xyz/track3
-- [ ] Enable paid collection after the official window opens and operator exclusions are configured
-- [ ] Collect real application requests during the official window
+- [x] Deploy Veyctum Proof at https://proof.midelabs.xyz/
+- [x] Enable paid collection inside the official UTC window with session and payer exclusions
+- [ ] Collect real external application requests during the official window
 - [ ] Reconcile the ledger with Telegraph signals and x402 settlements
 
-No request total is claimed yet.
+The last verified production status had `mode: live`, `valid_requests: 0`, and `distinct_sessions: 0`. No demand or cash-prize eligibility claim is made until the ledger is reconciled against the corresponding Telegraph signals and settlements.

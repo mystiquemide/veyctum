@@ -61,6 +61,9 @@ const envSchema = z.object({
   TRACK3_LEDGER_PATH: z.string().default('./data/track3-requests.jsonl'),
   TRACK3_SESSION_SALT: z.string().default(''),
   TRACK3_EXCLUDED_SESSION_DIGESTS: z.string().default(''),
+  // Optional comma-separated payer wallets that belong to the operator. These
+  // are rejected before a paid Engine retry can be forwarded or counted.
+  TRACK3_EXCLUDED_PAYER_ADDRESSES: z.string().default(''),
   TRACK3_COOLDOWN_SEC: z.coerce.number().int().min(10).max(86400).default(60),
   MINER_NAME: z.string().default('veyctum'),
   SCHEMA_VERSION: z.string().default(DEFAULT_SCHEMA_VERSION),
