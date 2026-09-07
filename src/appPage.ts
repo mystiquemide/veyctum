@@ -9,6 +9,10 @@ export const TRACK3_APP_PAGE = `<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Use Veyctum Proof to inspect the observed effect of an EVM transaction through Telegraph.">
 <meta name="theme-color" content="#0a1929">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Veyctum Proof | Verify">
+<meta property="og:description" content="Check what an EVM transaction actually did through Telegraph Miner 9005. One hash in, a verified payment effect out.">
+<meta property="og:url" content="https://proof.midelabs.xyz/app">
 <link rel="icon" type="image/svg+xml" href="/assets/img/favicon.svg">
 <title>Veyctum Proof | Verify</title>
 <link rel="preload" href="/assets/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin>

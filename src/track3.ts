@@ -137,7 +137,13 @@ function paymentPayer(value: string | string[] | undefined): string | null {
 function readCookie(request: FastifyRequest, name: string): string | null {
   const cookieHeader = request.headers.cookie ?? '';
   const match = cookieHeader.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`));
-  return match ? decodeURIComponent(match.slice(name.length + 1)) : null;
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match.slice(name.length + 1));
+  } catch {
+    // Malformed percent-encoding in a client-controlled cookie must not 500.
+    return null;
+  }
 }
 
 const track3BodySchema = z.object({
@@ -246,7 +252,12 @@ export function registerTrack3Routes(app: FastifyInstance, config: AppConfig): v
       if (paymentRequired) reply.header('PAYMENT-REQUIRED', paymentRequired);
       if (paymentResponse) reply.header('PAYMENT-RESPONSE', paymentResponse);
       reply.header('X-Track3-Request-Count', String(ledger.count()));
-      const bodyText = await upstream.text();
+      let bodyText: string;
+      try {
+        bodyText = await upstream.text();
+      } catch {
+        return reply.code(502).send({ error: 'TRACK3_ENGINE_UNAVAILABLE', detail: 'Telegraph Engine response could not be read' });
+      }
 
       if (upstream.status === 200 && paymentResponse) {
         let responseBody: Record<string, unknown> | null = null;

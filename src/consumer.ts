@@ -191,9 +191,20 @@ export function registerConsumerRoutes(
           signal_hash,
         },
       });
+      // On a refused duplicate the transition never happened, so the verdict
+      // must reflect the action's persisted state rather than the freshly
+      // computed one. Otherwise an integrator keying on verdict.outcome could
+      // re-run a protected side effect after a rejection or release.
+      const reportedVerdict = refusedDuplicate
+        ? {
+            matched: updated.status === 'RELEASED',
+            outcome: updated.status,
+            reason: `duplicate verify refused; action remains ${updated.status} (${verdict.reason})`,
+          }
+        : { matched: verdict.matched, outcome: verdict.outcome, reason: verdict.reason };
       return reply.code(200).send({
         action: updated,
-        verdict: { matched: verdict.matched, outcome: verdict.outcome, reason: verdict.reason },
+        verdict: reportedVerdict,
         refused_duplicate: refusedDuplicate,
       });
     } catch (err) {

@@ -66,7 +66,12 @@ async function fourByte(
       headers: { accept: 'application/json' },
     });
     if (!res.ok) {
-      cache.set(selector, null);
+      // 429/5xx are transient upstream conditions; negative-caching them would
+      // blank a selector until process restart. Only definitive 4xx answers
+      // (e.g. 404 no signature) are cached as "no result".
+      if (res.status >= 400 && res.status < 500 && res.status !== 429) {
+        cache.set(selector, null);
+      }
       return null;
     }
     const body = (await res.json()) as { results?: Array<{ id: number; text_signature: string }> };

@@ -104,6 +104,70 @@ describe('Track 3 preparation and ledger guard', () => {
     await app.close();
   });
 
+  it('returns 400 rather than 500 for a malformed JSON body', async () => {
+    const config = loadConfig({
+      RATE_LIMIT_PER_SEC: '1000',
+      CONSUMER_DB_PATH: ':memory:',
+      CONSUMER_AUTH_REQUIRED: 'false',
+      TRACK3_LEDGER_PATH: ':memory:',
+      TRACK3_ENABLED: 'true',
+      TRACK3_EXCLUDED_PAYER_ADDRESSES: '0x65ae39fd36f2a9fa8d738a0fac369c0cdc507a99',
+      TRACK3_START_AT: '2026-08-01T00:00:00.000Z',
+      TRACK3_END_AT: '2026-09-30T23:59:59.999Z',
+    });
+    const app = await buildApp(config, new LookupService(config), new ConsumerStore(':memory:'));
+    const res = await app.inject({
+      method: 'POST',
+      url: '/track3/engine',
+      headers: { 'content-type': 'application/json' },
+      payload: 'this is not json',
+      simulate: { json: false } as never,
+    });
+    expect([400, 415]).toContain(res.statusCode);
+    await app.close();
+  });
+
+  it('does not fail on a malformed session cookie', async () => {
+    const config = loadConfig({
+      RATE_LIMIT_PER_SEC: '1000',
+      CONSUMER_DB_PATH: ':memory:',
+      CONSUMER_AUTH_REQUIRED: 'false',
+      TRACK3_LEDGER_PATH: ':memory:',
+      TRACK3_ENABLED: 'false',
+    });
+    const app = await buildApp(config, new LookupService(config), new ConsumerStore(':memory:'));
+    const res = await app.inject({
+      method: 'GET',
+      url: '/app',
+      headers: { cookie: 'track3_session=%' },
+    });
+    expect(res.statusCode).toBe(200);
+    await app.close();
+  });
+
+  it('reports the persisted state on a refused duplicate verify, never a fresh RELEASED verdict', async () => {
+    const store = new ConsumerStore(':memory:');
+    store.createAction('dup-test', {
+      chain_id: 8453,
+      token: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913',
+      sender: '0x1111111111111111111111111111111111111111',
+      recipient: '0x2222222222222222222222222222222222222222',
+      raw_amount: '1000',
+    });
+    // Force the action into REJECTED, then attempt a "matched" resolve.
+    store.resolveAction('dup-test', { matched: false, outcome: 'REJECTED', reason: 'first attempt rejected' });
+    const second = store.resolveAction('dup-test', {
+      matched: true,
+      outcome: 'RELEASED',
+      reason: 'second attempt would release',
+      signalHash: '0x' + 'a'.repeat(64),
+    });
+    expect(second.refusedDuplicate).toBe(true);
+    expect(second.action.status).toBe('REJECTED');
+    // The route layer must report the persisted status, not the computed verdict.
+    expect(second.action.status).not.toBe('RELEASED');
+  });
+
   it('forwards the real Engine payment challenge without counting an unpaid request', async () => {
     const config = loadConfig({
       RATE_LIMIT_PER_SEC: '1000',

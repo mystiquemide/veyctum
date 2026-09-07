@@ -66,7 +66,9 @@ export async function buildApp(
   const staticPagePaths = new Set(['/', '/track3', '/track3/app', '/app']);
   app.addHook('onRequest', async (req, reply) => {
     const path = req.url.split('?', 1)[0];
-    if (path === '/health' || path === '/ready' || path?.startsWith('/assets/')) return;
+    if (path === '/health' || path?.startsWith('/assets/')) return;
+    // /ready makes live outbound RPC calls per chain, so it must stay inside
+    // the rate budget even though it is an unauthenticated liveness surface.
     if (req.method === 'GET' && path !== undefined && staticPagePaths.has(path)) return;
     limiter.prune();
     const verdict = limiter.check(req.ip);
@@ -218,6 +220,15 @@ export async function buildApp(
         error_code: 'INVALID_INPUT',
         error_detail: 'query must contain tx_hash (0x + 64 hex) and optional chain=base',
       });
+    }
+    // Fastify framework errors (malformed JSON body, unsupported content type,
+    // payload too large) already carry a 4xx statusCode; surface it instead of
+    // misreporting a client error as an internal one.
+    if (typeof (err as { statusCode?: unknown }).statusCode === 'number') {
+      const code = (err as { statusCode: number }).statusCode;
+      if (code >= 400 && code < 500) {
+        return reply.code(code).send({ error: 'INVALID_INPUT', detail: 'request body or headers could not be parsed' });
+      }
     }
     req.log.error({ err }, 'unhandled error');
     return reply.code(500).send({ error: 'UPSTREAM_ERROR', detail: 'internal error' });

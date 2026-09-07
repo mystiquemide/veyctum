@@ -8,6 +8,15 @@ export const TRACK3_LANDING_PAGE = `<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="Veyctum Proof verifies whether an on-chain payment effect actually happened before the next action proceeds.">
 <meta name="theme-color" content="#0a1929">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Veyctum Proof | Payment effect verification">
+<meta property="og:description" content="A successful receipt is not a successful payment. Veyctum Proof verifies the on-chain payment effect through Telegraph Miner 9005 before your next action depends on it.">
+<meta property="og:url" content="https://proof.midelabs.xyz/">
+<meta property="og:image" content="https://proof.midelabs.xyz/assets/img/hero-network.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Veyctum Proof | Payment effect verification">
+<meta name="twitter:description" content="Verify what an on-chain transaction actually did before acting on it. Live on Telegraph Miner 9005.">
+<meta name="twitter:image" content="https://proof.midelabs.xyz/assets/img/hero-network.jpg">
 <link rel="icon" type="image/svg+xml" href="/assets/img/favicon.svg">
 <title>Veyctum Proof | Payment effect verification</title>
 <link rel="preload" href="/assets/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin>

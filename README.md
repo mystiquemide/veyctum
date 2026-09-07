@@ -11,6 +11,8 @@
 Veyctum takes a transaction hash, auto-detects which chain it lives on, and returns a direct natural-language answer plus inspectable evidence. For Base USDC it normalizes the actual token-transfer effect, so a consumer can separate execution success from payment fulfillment and act on the observed state change instead of trusting `receipt.status == 1`.
 
 **Live Miner:** https://veyctum.splitpot.xyz
+**Track 3 application:** **Veyctum Proof** at https://proof.midelabs.xyz/ (verify a transaction at https://proof.midelabs.xyz/app)
+**Live status / demand ledger:** https://proof.midelabs.xyz/track3/status and https://proof.midelabs.xyz/track3/ledger.jsonl
 **Telegraph Miner ID:** `9005`
 **Intent:** `ONCHAIN_TX_LOOKUP`
 **Chains:** Ethereum (`1`) and Base (`8453`), auto-detected from the transaction hash
@@ -136,7 +138,7 @@ chain|tx_hash|status|block_number|from|to|value_wei
 
 For the shared Base fixture, Veyctum's success-path canonical value is asserted by both unit and live integration tests to match the incumbent format exactly.
 
-Recorded test state: **94 hermetic + 6 live integration tests passing**.
+Recorded test state: **96 hermetic + 6 live integration tests passing**.
 
 ## Proof
 
@@ -335,4 +337,4 @@ Start with [`evidence/README.md`](./evidence/README.md) for the shortest judge-o
 
 ## License
 
-MIT
+MIT for the project code. The self-hosted Inter and JetBrains Mono variable fonts in `public/fonts/` are redistributed under the SIL Open Font License 1.1 with their copyright notices retained (`public/fonts/OFL-Inter.txt`, `public/fonts/OFL-JetBrainsMono.txt`). Photography is from Unsplash.

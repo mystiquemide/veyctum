@@ -8,7 +8,7 @@ These rules were published before the collection window. They are intentionally 
 
 A counted request must satisfy every condition below:
 
-1. A real person starts a completed verification flow in the Escrow Verifier application.
+1. A real person starts a completed verification flow in the Veyctum Proof application.
 2. The application sends the request through the Telegraph Engine to live Miner `9005` for `ONCHAIN_TX_LOOKUP`. Direct requests to Veyctum's `/lookup` endpoint are not Track 3 application requests.
 3. Telegraph returns a successful x402 payment settlement and a signal that preserves the Veyctum response.
 4. The request uses a real EVM transaction hash and returns a completed answer or an explicit definitive non-success state. Failed, timed-out, or abandoned requests do not count.
@@ -39,7 +39,7 @@ The ledger is append-only and remains empty until a real external application re
 
 The final report will publish the valid-request total, the anonymized ledger, the date window, the number of distinct session digests, and excluded-request reasons. No eligibility claim will be made before the ledger is reconciled against Telegraph signals and settlements.
 
-The ledger is intentionally empty during preparation. No Track 3 demand is being counted before the window opens.
+The ledger opens empty and is only appended after the window opens with paid collection enabled. No Track 3 demand is counted before a settled external request exists.
 
 ## Sources
 

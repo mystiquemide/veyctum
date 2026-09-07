@@ -237,8 +237,10 @@ export class RpcGateway {
         })();
         try {
           return await Promise.race([work, timeout]);
-        } catch (err) {
-          return { name, ok: false, chain_id: null, head: null, detail: err instanceof Error ? err.message : String(err) };
+        } catch {
+          // Raw provider errors can embed full RPC URLs (including embedded
+          // API keys). Never expose them on the public readiness endpoint.
+          return { name, ok: false, chain_id: null, head: null, detail: 'probe failed' };
         }
       }),
     );
